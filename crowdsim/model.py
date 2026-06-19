@@ -150,6 +150,13 @@ class Simulation:
         self.load = np.full(n, 0.02); self.fatigue = np.zeros(n); self.fam = np.zeros(n)
         self.target = np.zeros((n, 2)); self.group = np.zeros(n, int)
         self._stuck = np.zeros(n)
+        # RL residual (set by a trained policy; default 0 = pure physics-dominant arbitration):
+        self.rl_force = np.zeros((n, 2))     # corrective force u_rl
+        self.rl_lambda_raw = np.zeros(n)     # learned raw gate term added inside the lambda sigmoid
+
+    def set_rl(self, force, lambda_raw):
+        self.rl_force[:] = force
+        self.rl_lambda_raw[:] = lambda_raw
 
     def set_walls(self, walls):
         self.walls = [tuple(w) for w in walls]
@@ -245,10 +252,10 @@ class Simulation:
             ehat = np.where(gn > 1e-6, g / np.maximum(gn, 1e-6), 0.0)
         drive = (vmax[:, None] * ehat - self.vel) / c.tau
         F_phys = drive + interactions
-        # affect-gated arbitration
-        lam = _sigmoid(c.physics_bias + c.k_lambda_affect * self.load + c.k_lambda_field * fieldp)
-        u_rl = self.u_rl(self) if self.u_rl is not None else 0.0
-        accel = lam[:, None] * F_phys + (1.0 - lam[:, None]) * u_rl
+        # affect-gated arbitration: lambda = sigma(bias + k_a*load + k_f*fieldP + learned raw gate)
+        lam = _sigmoid(c.physics_bias + c.k_lambda_affect * self.load + c.k_lambda_field * fieldp
+                       + self.rl_lambda_raw)
+        accel = lam[:, None] * F_phys + (1.0 - lam[:, None]) * self.rl_force
         an = np.linalg.norm(accel, axis=1, keepdims=True)
         accel = np.where(an > c.max_accel, accel * c.max_accel / np.maximum(an, 1e-9), accel)
         self.vel += accel * dt

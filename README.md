@@ -61,6 +61,7 @@ python experiments/phase_transition.py
 | `phase_transition.py` | collective panic as a phase transition (critical density + feedback gain) | ✅ |
 | `agent_drain.py` | field autonomy: persists + decays at its own rate after the crowd is removed | ✅ |
 | `coordination.py` | communication-free exit redistribution (field-route vs nearest) | ✅ |
+| `train_rl.py` | learned affect-gated arbitration (multi-agent PPO) — the part that was Unity-only | ✅ |
 | `actuator.py` | affect field as an actuator; self-organisation beats naive central control | planned |
 | `early_warning.py` | critical-slowing-down early warning of the panic tipping point | planned |
 
@@ -71,5 +72,12 @@ with the field, exactly 0 without) — pillar-1 generalisation, reproduced in pu
 - Boundary is `"walls"` (clamp + rectangular obstacles) or `"torus"` (periodic).
 - The affect field can be disabled by setting `field_gain=0` and `field_deposit_gain=0` (the matched
   pairwise/no-field baseline → Moran's I ≈ 0).
-- This Python model mirrors the Unity ML-Agents version; the genuine Unity-only part was training the
-  PPO arbitration policy. Most experiments do not use the learned residual, so they port exactly.
+- This Python model mirrors the Unity ML-Agents version. The previously Unity-only part — training the
+  PPO arbitration policy — is now reproduced in pure torch (`experiments/train_rl.py`, `crowdsim/rl.py`,
+  saved to `models/`). **Honest finding:** with a validated physics controller and a minimal reward, the
+  learned gate becomes *physics-dominant* (λ → 0.97–0.98, above the 0.94 default) and the learned residual
+  does **not** beat physics — a tie on the easy open task, and *worse* on a wall+gap task where the
+  progress reward is deceptive (the policy backs off rather than discovering the detour). So pillar 2's
+  value is conditional: the gate correctly defers to competent physics; RL would need reward shaping or a
+  genuinely physics-unsolvable regime to earn its keep. Pillar 1 (the stigmergic field) is the strong,
+  unconditional contribution.
