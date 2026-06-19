@@ -40,11 +40,11 @@ class _GroupNav:
         return out
 
 
-def _build_navs(cfg, sc):
+def _build_navs(cfg, sc, inflate=0.35, nav_cell=0.4):
     navs = []
     for i in range(len(sc.spawns)):
         ex = sc.exits if sc.goals is None else [sc.exits[k] for k in sc.goals[i]]
-        navs.append(NavField(cfg, sc.walls, ex))
+        navs.append(NavField(cfg, sc.walls, ex, inflate=inflate, nav_cell=nav_cell))
     return navs
 
 
@@ -106,10 +106,10 @@ def _hotspots(risk, cfg, sc, k=5, frac=0.55):
 
 
 def evaluate_layout(scenario, seeds=(0, 1, 2), n=45, maxsec=50.0, policy=None, field_on=True,
-                    field_route=False, k_field=20.0, relax_drive=True):
+                    field_route=False, k_field=20.0, relax_drive=True, inflate=0.35, nav_cell=0.4):
     sc = scenario
     nexit = len(sc.exits)
-    ev_l, t50_l, t90_l, pk_l, mor_l = [], [], [], [], []
+    ev_l, t50_l, t80_l, t90_l, pk_l, mor_l = [], [], [], [], [], []
     use_acc = np.zeros(nexit)
     risk_acc = None
     rt = 40  # re-choose interval in steps (~2 s at dt=0.05)
@@ -122,7 +122,7 @@ def evaluate_layout(scenario, seeds=(0, 1, 2), n=45, maxsec=50.0, policy=None, f
         pos, grp = _spawn(sc, n, rng); m = len(pos); sim.spawn(pos)
         exits = np.array(sc.exits, float)
         if field_route:                      # affect-field exit guidance: per-exit navs, dynamic choice
-            navs = [NavField(cfg, sc.walls, [tuple(e)]) for e in sc.exits]
+            navs = [NavField(cfg, sc.walls, [tuple(e)], inflate=inflate, nav_cell=nav_cell) for e in sc.exits]
             appr = []
             for e in sc.exits:
                 v = -np.array(e, float); nv = np.linalg.norm(v)
@@ -135,7 +135,7 @@ def evaluate_layout(scenario, seeds=(0, 1, 2), n=45, maxsec=50.0, policy=None, f
                 return np.argmin(dd + pen[None, :], axis=1)
             gnav = _GroupNav(navs, choose())
         else:                                # nearest-exit routing (baseline)
-            navs = _build_navs(cfg, sc); gnav = _GroupNav(navs, grp.copy())
+            navs = _build_navs(cfg, sc, inflate, nav_cell); gnav = _GroupNav(navs, grp.copy())
         sim.nav = gnav
         evac = np.zeros(m, bool); evac_t = np.full(m, -1.0); used = np.full(m, -1)
         steps = int(maxsec / cfg.dt); hw, hh = sc.width / 2, sc.height / 2
@@ -167,6 +167,7 @@ def evaluate_layout(scenario, seeds=(0, 1, 2), n=45, maxsec=50.0, policy=None, f
         ev_l.append(int(evac.sum()))
         ts = np.sort(evac_t[evac_t >= 0])
         t50_l.append(float(ts[int(np.ceil(0.5 * m)) - 1]) if len(ts) >= int(np.ceil(0.5 * m)) else -1.0)
+        t80_l.append(float(ts[int(np.ceil(0.8 * m)) - 1]) if len(ts) >= int(np.ceil(0.8 * m)) else -1.0)
         t90_l.append(float(ts[int(np.ceil(0.9 * m)) - 1]) if len(ts) >= int(np.ceil(0.9 * m)) else -1.0)
         pk_l.append(denspk); mor_l.append(mor / max(1, ms))
         for e in range(nexit):
@@ -177,7 +178,8 @@ def evaluate_layout(scenario, seeds=(0, 1, 2), n=45, maxsec=50.0, policy=None, f
     binding = int(np.argmax(use_acc)) if nexit > 1 else 0
     balance = float(use.max()) if nexit > 1 else 1.0
     return dict(
-        evacuated=float(np.mean(ev_l)), n=n, t50=float(np.mean(t50_l)), t90=float(np.mean(t90_l)),
+        evacuated=float(np.mean(ev_l)), n=n, t50=float(np.mean(t50_l)),
+        t80=float(np.mean(t80_l)), t90=float(np.mean(t90_l)),
         peak_density=float(np.mean(pk_l)), morans_i=float(np.mean(mor_l)),
         exit_usage=use.tolist(), binding_exit=binding, exit_imbalance=balance,
         hotspots=_hotspots(risk_acc, Config(width=sc.width, height=sc.height), sc),
