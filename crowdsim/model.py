@@ -140,6 +140,7 @@ class Simulation:
         self.field = AffectField(cfg)
         self.walls = []                      # list of (cx, cz, sx, sz)
         self.u_rl = None                     # optional callable(sim) -> (N,2)
+        self.nav = None                      # optional NavField: routes around walls toward exits
         self._alloc(0)
 
     # ---- setup ----
@@ -236,9 +237,12 @@ class Simulation:
         vmax = np.maximum(0.25, (c.base_speed + (c.stressed_speed - c.base_speed) * self.load) * (1 - 0.6 * self.fatigue))
         # Helbing driving term: relax velocity toward desired (vmax along the goal direction). This makes
         # free-flow speed approach vmax and supplies the damping, so no separate damping term is needed.
-        g = self.target - self.pos
-        gn = np.linalg.norm(g, axis=1, keepdims=True)
-        ehat = np.where(gn > 1e-6, g / np.maximum(gn, 1e-6), 0.0)
+        if self.nav is not None:
+            ehat = self.nav.direction_at(self.pos)          # route around walls toward nearest exit
+        else:
+            g = self.target - self.pos
+            gn = np.linalg.norm(g, axis=1, keepdims=True)
+            ehat = np.where(gn > 1e-6, g / np.maximum(gn, 1e-6), 0.0)
         drive = (vmax[:, None] * ehat - self.vel) / c.tau
         F_phys = drive + interactions
         # affect-gated arbitration

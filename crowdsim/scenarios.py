@@ -17,6 +17,7 @@ class Scenario:
     spawns: list = field(default_factory=list)     # (x0, x1, z0, z1) spawn rectangles
     exits: list = field(default_factory=list)      # (x, z) exit / door points
     arrows: list = field(default_factory=list)     # (x, z, dx, dz) intended flow
+    goals: list = None                             # per-spawn-group exit indices; None => every exit (nearest)
 
 
 def vwall(x, zmin, zmax, gaps=(), gap_half=0.7, t=0.5):
@@ -67,8 +68,8 @@ def _build():
         walls=vwall(0, -8, 8, gaps=[0], gap_half=1.5), spawns=[(-9, -2, -7, 7)],
         exits=[(0, 0), (8, 0)], arrows=[(-5, 0, 6, 0)])
 
-    S["PillarBeforeDoor"] = Scenario("PillarBeforeDoor", "obstacle before exit (flow aid)", 20, 16,
-        walls=vwall(0, -8, 8, gaps=[0]) + [block(-1.6, 0, 0.9, 0.9)],
+    S["PillarBeforeDoor"] = Scenario("PillarBeforeDoor", "offset pillar before exit (flow aid)", 20, 16,
+        walls=vwall(0, -8, 8, gaps=[0], gap_half=0.9) + [block(-1.8, 0.75, 0.8, 0.8)],
         spawns=[(-9, -3, -7, 7)], exits=[(0, 0), (8, 0)], arrows=[(-5, 0, 6, 0)])
 
     S["MultiExit"] = Scenario("MultiExit", "two doors, nearest routing", 20, 16,
@@ -93,7 +94,8 @@ def _build():
     S["CounterFlow"] = Scenario("CounterFlow", "two opposing streams", 24, 6,
         walls=[(0, 3.25, 24, 0.5), (0, -3.25, 24, 0.5)],
         spawns=[(-11, -4, -2.3, 2.3), (4, 11, -2.3, 2.3)],
-        exits=[(11.5, 0), (-11.5, 0)], arrows=[(-7, 1.2, 6, 0), (7, -1.2, -6, 0)])
+        exits=[(11.5, 0), (-11.5, 0)], goals=[[0], [1]],   # left group -> right exit, right group -> left
+        arrows=[(-7, 1.2, 6, 0), (7, -1.2, -6, 0)])
 
     S["Corner"] = Scenario("Corner", "90-degree L-turn", 26, 26,
         walls=[(-5.25, -1.5, 13.5, 0.5), (-6.75, 1.5, 10.5, 0.5),
@@ -104,7 +106,8 @@ def _build():
         walls=[block(7.25, 7.25, 11.5, 11.5), block(-7.25, 7.25, 11.5, 11.5),
                block(7.25, -7.25, 11.5, 11.5), block(-7.25, -7.25, 11.5, 11.5)],
         spawns=[(-12, -9, -1.1, 1.1), (-1.1, 1.1, -12, -9)],
-        exits=[(12, 0), (0, 12)], arrows=[(-9, 0, 7, 0), (0, -9, 0, 7)])
+        exits=[(12, 0), (0, 12)], goals=[[0], [1]],        # west stream -> east, south stream -> north
+        arrows=[(-9, 0, 7, 0), (0, -9, 0, 7)])
 
     S["TJunction"] = Scenario("TJunction", "T-junction merge", 26, 18,
         walls=[block(0, 6.5, 26, 0.5)] +                                   # corridor ceiling
@@ -143,6 +146,26 @@ def _build():
         walls=[block(-2.5, 6.5, 11, 0.5), block(-2.5, -6.5, 11, 0.5),     # converging upper/lower walls
                (4, 4, 0.5, 5.5), (4, -4, 0.5, 5.5)] + vwall(8, -8, 8, gaps=[0]),
         spawns=[(-11, -9, -9, 9)], exits=[(8, 0)], arrows=[(-8, 0, 15, 0)])
+
+    S["FourRooms"] = Scenario("FourRooms", "2x2 rooms, doors, one exit", 24, 24,
+        walls=vwall(0, -12, 12, gaps=[6, -6]) + hwall(0, -12, 12, gaps=[6, -6]),
+        spawns=[(-10, -2, 2, 10), (2, 10, 2, 10), (-10, -2, -10, -2)],
+        exits=[(11, -11)], arrows=[(-6, 6, 5, -5)])
+
+    S["Zigzag"] = Scenario("Zigzag", "S-bend corridor", 26, 18,
+        walls=[(0, 8.5, 26, 0.5), (0, -8.5, 26, 0.5),
+               block(-4, 3.0, 0.5, 11), block(4, -3.0, 0.5, 11)],
+        spawns=[(-12, -9, -7, 7)], exits=[(12.5, 0)], arrows=[(-9, 0, 5, 0)])
+
+    S["AsymmetricExits"] = Scenario("AsymmetricExits", "narrow vs wide door", 22, 18,
+        walls=[(0, 7, 0.5, 4), (0, 0.5, 0.5, 7), (0, -7.5, 0.5, 3)],
+        spawns=[(-10, -2, -8, 8)], exits=[(0, 4.5), (0, -4.5), (8, 4.5), (8, -4.5)],
+        arrows=[(-5, 0, 6, 0)])
+
+    S["WideCounterFlow"] = Scenario("WideCounterFlow", "counter-flow, wide corridor", 24, 10,
+        walls=[(0, 5.25, 24, 0.5), (0, -5.25, 24, 0.5)],
+        spawns=[(-11, -4, -4.3, 4.3), (4, 11, -4.3, 4.3)],
+        exits=[(11.5, 0), (-11.5, 0)], goals=[[0], [1]], arrows=[(-7, 2, 6, 0), (7, -2, -6, 0)])
 
     return S
 

@@ -8,6 +8,7 @@ runs in seconds with no engine round-trips. Two contributions are reproduced:
     term through a scalar gate lambda conditioned on its affective state (dual-process).
 """
 from .model import Config, AffectField, Simulation
-from . import metrics
+from .navigation import NavField
+from . import metrics, scenarios
 
-__all__ = ["Config", "AffectField", "Simulation", "metrics"]
+__all__ = ["Config", "AffectField", "Simulation", "NavField", "metrics", "scenarios"]

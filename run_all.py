@@ -6,10 +6,11 @@ sys.path.insert(0, ROOT)
 
 EXPERIMENTS = [
     "scenario_layouts",      # draws the whole scenario library (figure only)
+    "egress_runner",         # runs every scenario, FIELD vs NOFIELD -> table + figure
     "fundamental_diagram",
     "phase_transition",
     # added as ported:
-    # "coordination", "actuator", "moran_generalization", "early_warning",
+    # "coordination", "actuator", "early_warning",
 ]
 
 
