@@ -23,12 +23,21 @@ slowdown with density).
 
 ```
 crowdsim/
-  model.py     core: Config, AffectField, Simulation (vectorised numpy)
-  metrics.py   Moran's I helpers, Cliff's δ, Mann–Whitney, density/contacts
-experiments/   one runnable script per study (writes results/*.csv + figures/*.png)
-tests/         smoke_test.py
-run_all.py     run every experiment
+  model.py      core: Config, AffectField, Simulation (vectorised numpy)
+  metrics.py    Moran's I helpers, Cliff's δ, Mann–Whitney, density/contacts
+  scenarios.py  data-driven library of 19 RiMEA-style layouts (arena, walls, spawns, exits, flow)
+experiments/    one runnable script per study (writes results/*.csv + figures/*.png)
+tests/          smoke_test.py
+run_all.py      run every experiment
 ```
+
+## Scenario library
+
+`crowdsim/scenarios.py` holds 19 pedestrian benchmarks as pure geometry (open square, corridor,
+bottleneck, wide door, pillar-before-door, multi-exit, three-exit, near/far, double-bottleneck,
+counter-flow, corner, 4-way crossing, T-junction, merging lanes, obstacle field, room→corridor,
+two-rooms, stage egress, stadium funnel). Adding one is a single dict entry; `experiments/scenario_layouts.py`
+draws them all into `figures/scenario_layouts.png`, so the visual stays in sync as the library grows.
 
 ## Run
 

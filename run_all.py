@@ -5,6 +5,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
 
 EXPERIMENTS = [
+    "scenario_layouts",      # draws the whole scenario library (figure only)
     "fundamental_diagram",
     "phase_transition",
     # added as ported:
