@@ -11,10 +11,13 @@ EXPERIMENTS = [
     "phase_transition",
     "agent_drain",           # field autonomy (persists + decays after the crowd is removed)
     "coordination",          # communication-free exit redistribution (field-route vs nearest)
+    "actuator",              # field as actuator: steers but naive control over-steers (self-org wins)
+    "precision_gate",        # inference-time gate cuts stuck-states (defer from stalled physics)
+    "early_warning",         # critical slowing down: ensemble susceptibility leads the panic tip
+    "anisotropy",            # honest negative: advection operator OK, standard Moran's I direction-blind
+    "rl_resolution",         # the 2.5x RL gain is a baseline-locomotion artifact (no RL)
     "design_clinic",         # evaluate a layout + A/B-test ranked safety interventions
-    # added as ported:
-    # "actuator", "early_warning", "anisotropy",
-    # train_rl is intentionally omitted from run_all (slow torch training; run it directly)
+    # train_rl / rl_scenarios omitted from run_all (need torch / the trained policy; run directly)
 ]
 
 

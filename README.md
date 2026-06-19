@@ -68,8 +68,10 @@ python experiments/phase_transition.py
 | `rl_scenarios.py` | run the trained RL-combined agents across the library (OOD transfer: ~matches physics) | ✅ |
 | `rl_resolution.py` | explains Unity's 2.5× RL gain: a locomotion-baseline artifact, reproduced with NO RL | ✅ |
 | `design_clinic.py` | evaluate a layout + A/B-test ranked safety interventions (the design framework) | ✅ |
-| `actuator.py` | affect field as an actuator; self-organisation beats naive central control | planned |
-| `early_warning.py` | critical-slowing-down early warning of the panic tipping point | planned |
+| `actuator.py` | affect field as an actuator; steers the crowd but naive control over-steers (self-org wins on balance) | ✅ |
+| `precision_gate.py` | inference-time precision gate cuts stuck-states ~58% (defers from stalled physics) | ✅ |
+| `early_warning.py` | critical-slowing-down: ensemble susceptibility (×9.8) leads the panic tipping point | ✅ |
+| `anisotropy.py` | honest negative: advection operator correct, but standard Moran's I is direction-blind | ✅ |
 
 The egress runner confirms the field's spatial structure across **all 23 layouts** (Moran's I ≈ 0.87–0.93
 with the field, exactly 0 without) — pillar-1 generalisation, reproduced in pure Python.
