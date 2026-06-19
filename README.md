@@ -66,6 +66,7 @@ python experiments/phase_transition.py
 | `coordination.py` | communication-free exit redistribution (field-route vs nearest) | ✅ |
 | `train_rl.py` | learned affect-gated arbitration (multi-agent PPO) — the part that was Unity-only | ✅ |
 | `rl_scenarios.py` | run the trained RL-combined agents across the library (OOD transfer: ~matches physics) | ✅ |
+| `rl_resolution.py` | explains Unity's 2.5× RL gain: a locomotion-baseline artifact, reproduced with NO RL | ✅ |
 | `design_clinic.py` | evaluate a layout + A/B-test ranked safety interventions (the design framework) | ✅ |
 | `actuator.py` | affect field as an actuator; self-organisation beats naive central control | planned |
 | `early_warning.py` | critical-slowing-down early warning of the panic tipping point | planned |
@@ -108,3 +109,11 @@ learned RL agents on any layout.)
   value is conditional: the gate correctly defers to competent physics; RL would need reward shaping or a
   genuinely physics-unsolvable regime to earn its keep. Pillar 1 (the stigmergic field) is the strong,
   unconditional contribution.
+- **Why the Unity paper saw a 2.5× RL egress gain but 2D does not** (`experiments/rl_resolution.py`):
+  Unity's own clamp-probe already showed pure physics (λ=1) ≥ the learned gate, and the paper attributes
+  the 2.5× to "the medium-horizon goal-seeking a purely local Social-Force controller lacks". We confirm
+  it is a **baseline-locomotion artifact, not RL intelligence**: a *weak* constant-force controller
+  (free-flow ≈ 0.8 m/s) vs the *strong* Helbing relaxation (free-flow ≈ 2.0) gives a **2.85× open-arena
+  throughput gap with no RL at all** (and the weak one fails outright at bottlenecks). Unity's RL merely
+  supplied the fast goal-seeking its BaselineSFM lacked; our physics has it natively (validated vs
+  Weidmann), so RL adds nothing. The 2.5× was real but attributable to a weak baseline.

@@ -39,6 +39,9 @@ class Config:
     stressed_speed: float = 2.6
     max_accel: float = 8.0
     tau: float = 0.5                 # velocity-relaxation time (Helbing driving term -> free-flow = vmax)
+    relax_drive: bool = True         # True: Helbing relaxation (free-flow -> vmax ~1.34+). False: a weak
+    weak_drive_damp: float = 2.6     #   constant goal force + damping (free-flow ~ w_goal/weak_drive_damp
+                                     #   ~ 0.6 m/s) -- mimics a goal-seeking-poor "BaselineSFM" locomotion.
     # affect-gated arbitration: lambda = sigmoid(physics_bias + k_a*load + k_f*fieldP + raw)
     physics_bias: float = 2.0
     k_lambda_affect: float = 2.0
@@ -250,7 +253,10 @@ class Simulation:
             g = self.target - self.pos
             gn = np.linalg.norm(g, axis=1, keepdims=True)
             ehat = np.where(gn > 1e-6, g / np.maximum(gn, 1e-6), 0.0)
-        drive = (vmax[:, None] * ehat - self.vel) / c.tau
+        if c.relax_drive:
+            drive = (vmax[:, None] * ehat - self.vel) / c.tau
+        else:                          # weak constant goal force + damping (free-flow ~0.6, no relaxation)
+            drive = c.w_goal * ehat - c.weak_drive_damp * self.vel
         F_phys = drive + interactions
         # affect-gated arbitration: lambda = sigma(bias + k_a*load + k_f*fieldP + learned raw gate)
         lam = _sigmoid(c.physics_bias + c.k_lambda_affect * self.load + c.k_lambda_field * fieldp

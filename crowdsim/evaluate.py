@@ -106,7 +106,7 @@ def _hotspots(risk, cfg, sc, k=5, frac=0.55):
 
 
 def evaluate_layout(scenario, seeds=(0, 1, 2), n=45, maxsec=50.0, policy=None, field_on=True,
-                    field_route=False, k_field=20.0):
+                    field_route=False, k_field=20.0, relax_drive=True):
     sc = scenario
     nexit = len(sc.exits)
     ev_l, t50_l, t90_l, pk_l, mor_l = [], [], [], [], []
@@ -115,7 +115,8 @@ def evaluate_layout(scenario, seeds=(0, 1, 2), n=45, maxsec=50.0, policy=None, f
     rt = 40  # re-choose interval in steps (~2 s at dt=0.05)
     for seed in seeds:
         cfg = Config(width=sc.width, height=sc.height, boundary="walls", max_value=50.0,
-                     field_gain=1.10 if field_on else 0.0, field_deposit_gain=0.7 if field_on else 0.0)
+                     field_gain=1.10 if field_on else 0.0, field_deposit_gain=0.7 if field_on else 0.0,
+                     relax_drive=relax_drive)
         rng = np.random.default_rng(seed)
         sim = Simulation(cfg, rng); sim.set_walls(sc.walls)
         pos, grp = _spawn(sc, n, rng); m = len(pos); sim.spawn(pos)
