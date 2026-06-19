@@ -60,7 +60,7 @@ python experiments/phase_transition.py
 | `fundamental_diagram.py` | speed–density vs Weidmann (locomotion validation) | ✅ |
 | `phase_transition.py` | collective panic as a phase transition (critical density + feedback gain) | ✅ |
 | `agent_drain.py` | field autonomy: persists + decays at its own rate after the crowd is removed | ✅ |
-| `coordination.py` | communication-free exit redistribution (field-route vs nearest) | planned |
+| `coordination.py` | communication-free exit redistribution (field-route vs nearest) | ✅ |
 | `actuator.py` | affect field as an actuator; self-organisation beats naive central control | planned |
 | `early_warning.py` | critical-slowing-down early warning of the panic tipping point | planned |
 

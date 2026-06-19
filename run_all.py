@@ -10,8 +10,9 @@ EXPERIMENTS = [
     "fundamental_diagram",
     "phase_transition",
     "agent_drain",           # field autonomy (persists + decays after the crowd is removed)
+    "coordination",          # communication-free exit redistribution (field-route vs nearest)
     # added as ported:
-    # "coordination", "actuator", "early_warning", "anisotropy",
+    # "actuator", "early_warning", "anisotropy",
 ]
 
 
