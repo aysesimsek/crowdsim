@@ -2,6 +2,7 @@ __pycache__/
 *.pyc
 results/*.csv
 figures/*.png
+figures/clinic/
 .venv/
 venv/
 .DS_Store

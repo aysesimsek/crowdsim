@@ -58,7 +58,7 @@ python experiments/phase_transition.py
 
 | script | reproduces | status |
 |--------|-----------|--------|
-| `scenario_layouts.py` | draws all 23 scenarios (auto-updates with the library) | ✅ |
+| `scenario_layouts.py` | draws all 28 scenarios (auto-updates with the library) | ✅ |
 | `egress_runner.py` | every scenario, FIELD vs NOFIELD: egress + Moran's I + density (navigation-routed) | ✅ |
 | `fundamental_diagram.py` | speed–density vs Weidmann (locomotion validation) | ✅ |
 | `phase_transition.py` | collective panic as a phase transition (critical density + feedback gain) | ✅ |
@@ -68,12 +68,15 @@ python experiments/phase_transition.py
 | `rl_scenarios.py` | run the trained RL-combined agents across the library (OOD transfer: ~matches physics) | ✅ |
 | `rl_resolution.py` | explains Unity's 2.5× RL gain: a locomotion-baseline artifact, reproduced with NO RL | ✅ |
 | `design_clinic.py` | evaluate a layout + A/B-test ranked safety interventions (the design framework) | ✅ |
-| `actuator.py` | affect field as an actuator; steers the crowd but naive control over-steers (self-org wins on balance) | ✅ |
+| `actuator.py` | field as an actuator; naive (open-loop) control over-steers, **closed-loop control balances** (maxshare 1.0→0.77) | ✅ |
 | `precision_gate.py` | inference-time precision gate cuts stuck-states ~58% (defers from stalled physics) | ✅ |
 | `early_warning.py` | critical-slowing-down: ensemble susceptibility (×9.8) leads the panic tipping point | ✅ |
 | `anisotropy.py` | honest negative: advection operator correct, but standard Moran's I is direction-blind | ✅ |
+| `dual_process_decision.py` | dual-process arbitration at the **decision** level — large footprint (maxshare swing 0.45) vs modest at locomotion | ✅ |
+| `design_clinic_gallery.py` | risk map + A/B-tested prescription across 6 layouts (one figure) | ✅ |
+| `design_clinic_all.py` | full design-clinic report for **every** scenario → `figures/clinic/` | ✅ |
 
-The egress runner confirms the field's spatial structure across **all 23 layouts** (Moran's I ≈ 0.87–0.93
+The egress runner confirms the field's spatial structure across **all 28 layouts** (Moran's I ≈ 0.87–0.93
 with the field, exactly 0 without) — pillar-1 generalisation, reproduced in pure Python.
 
 ## Design clinic (layout in → diagnosis + solutions out)
