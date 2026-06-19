@@ -23,10 +23,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RES = os.path.join(ROOT, "results"); FIG = os.path.join(ROOT, "figures")
 os.makedirs(RES, exist_ok=True); os.makedirs(FIG, exist_ok=True)
 
-W, H = 26.0, 18.0
-NS = [30, 60, 90, 120, 150, 180]
+W, H = 30.0, 20.0      # larger room so high occupancies spawn without overlap
+NS = [60, 120, 180, 240, 320, 400]
 SEEDS = (0, 1)
-MAXSEC = 80.0
+MAXSEC = 45.0          # the median (t50) is reached well within this even at high N
 T_SAFE = 25.0          # median-clearance-time limit (s) defining "safe"
 D_CRUSH = 4.0          # peak local density (ped / m^2) above which crowding is dangerous
 
