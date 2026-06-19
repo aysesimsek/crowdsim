@@ -167,6 +167,30 @@ def _build():
         spawns=[(-11, -4, -4.3, 4.3), (4, 11, -4.3, 4.3)],
         exits=[(11.5, 0), (-11.5, 0)], goals=[[0], [1]], arrows=[(-7, 2, 6, 0), (7, -2, -6, 0)])
 
+    S["LCorridor"] = Scenario("LCorridor", "L-shaped route around a core", 24, 24,
+        walls=[block(2, 2, 16, 16)],
+        spawns=[(-11, -7, 6, 11)], exits=[(11, -11)],
+        arrows=[(-9, 8, 0, -7), (-8, -9, 7, 0)])
+
+    S["Atrium"] = Scenario("Atrium", "central island, four side exits", 26, 26,
+        walls=[block(0, 0, 8, 8)],
+        spawns=[(-11, -6, -11, -6), (6, 11, -11, -6), (-11, -6, 6, 11), (6, 11, 6, 11)],
+        exits=[(12.5, 0), (-12.5, 0), (0, 12.5), (0, -12.5)],
+        arrows=[(-8, -8, 4, 4), (8, 8, -4, -4)])
+
+    S["Concourse"] = Scenario("Concourse", "long hall, three side exits", 30, 14,
+        walls=hwall(-5.5, -15, 15, gaps=[-9, 0, 9], gap_half=1.0),
+        spawns=[(-14, 14, 0, 5)], exits=[(-9, -6.2), (0, -6.2), (9, -6.2)],
+        arrows=[(-9, 3, 0, -6), (0, 3, 0, -6), (9, 3, 0, -6)])
+
+    S["ParallelBottlenecks"] = Scenario("ParallelBottlenecks", "two doors in parallel", 20, 18,
+        walls=vwall(0, -9, 9, gaps=[4, -4], gap_half=0.8),
+        spawns=[(-9, -2, -8, 8)], exits=[(0, 4), (0, -4)],
+        arrows=[(-5, 3, 5, 0), (-5, -3, 5, 0)])
+
+    S["DiagonalRoom"] = Scenario("DiagonalRoom", "diagonal crossing to a corner exit", 20, 20,
+        spawns=[(-9, -4, 4, 9)], exits=[(9, -9)], arrows=[(-6, 6, 7, -7)])
+
     return S
 
 
