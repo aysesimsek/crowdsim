@@ -9,8 +9,9 @@ EXPERIMENTS = [
     "egress_runner",         # runs every scenario, FIELD vs NOFIELD -> table + figure
     "fundamental_diagram",
     "phase_transition",
+    "agent_drain",           # field autonomy (persists + decays after the crowd is removed)
     # added as ported:
-    # "coordination", "actuator", "early_warning",
+    # "coordination", "actuator", "early_warning", "anisotropy",
 ]
 
 
