@@ -24,7 +24,8 @@ os.makedirs(RES, exist_ok=True); os.makedirs(FIG, exist_ok=True)
 
 N, SEEDS, MAXSEC = 45, (0, 1, 2, 3, 4), 60.0
 KFIELD, RECHOOSE, REACH = 20.0, 2.0, 0.6
-ACT_AMOUNT = 80.0          # external deposit rate at the near door (naive controller)
+ACT_AMOUNT = 80.0          # external deposit rate at the near door (naive open-loop controller)
+GAIN_CL = 6.0              # closed-loop gain: deposit proportional to the live routing imbalance
 
 
 class ExitNav:
@@ -64,8 +65,13 @@ def run(mode, seed):
     steps = int(MAXSEC / cfg.dt); rt = int(RECHOOSE / cfg.dt); hw, hh = sc.width / 2, sc.height / 2
     parked = 0
     for t in range(steps):
-        if mode == "ActuatorNaive":                               # external controller dumps at near door
+        if mode == "ActuatorNaive":                               # open-loop: constant dump at near door
             sim.field.deposit_point(appr[0][0], appr[0][1], ACT_AMOUNT * cfg.dt)
+        elif mode == "ActuatorCL":                                # closed-loop: deposit ~ live imbalance
+            n0 = int(((enav.choice == 0) & (~evac)).sum())
+            n1 = int(((enav.choice == 1) & (~evac)).sum())
+            if n0 - n1 > 0:                                        # only relieve the over-subscribed door
+                sim.field.deposit_point(appr[0][0], appr[0][1], GAIN_CL * (n0 - n1) * cfg.dt)
         if t % rt == 0:
             keep = (~evac) & (enav.choice >= 0) & (sim.pos[:, 0] < sc.exits[0][0] - 2)
             if keep.any():
@@ -91,7 +97,7 @@ def run(mode, seed):
 def main():
     print("=" * 64); print("ACTUATOR: external field control vs self-organisation"); print("=" * 64)
     rows = ["mode,seed,evac,near,far,maxshare"]; agg = {}
-    for mode in ("Baseline", "Self-org", "ActuatorNaive"):
+    for mode in ("Baseline", "Self-org", "ActuatorNaive", "ActuatorCL"):
         ev, ms, fr = [], [], []
         for s in SEEDS:
             r = run(mode, s)
@@ -99,26 +105,28 @@ def main():
             ev.append(r["evac"]); ms.append(r["maxshare"]); fr.append(r["far"])
         agg[mode] = (np.mean(ev), np.mean(ms), np.mean(fr))
         print(f"  {mode:14s} evac={np.mean(ev):4.1f}  far-exit={np.mean(fr):4.1f}  maxshare={np.mean(ms):.2f}")
-    so, ac, bl = agg["Self-org"], agg["ActuatorNaive"], agg["Baseline"]
-    print(f"\n  -> Writing to the field STEERS the crowd: far-exit usage {bl[2]:.1f} -> {ac[2]:.1f}.")
-    print(f"     But naive control OVER-steers: it flips everyone to the far door, so the max-exit share")
-    print(f"     returns to {ac[1]:.2f} (re-imbalanced), whereas decentralised self-organisation reaches a")
-    print(f"     genuine balance of {so[1]:.2f}. On the safety objective (don't overload one door),")
-    print(f"     self-organisation beats naive central control. (Egress is geometry-confounded here: the")
-    print(f"     far door is costlier, so raw counts favour the near-only baseline.)")
+    so, ac, cl, bl = agg["Self-org"], agg["ActuatorNaive"], agg["ActuatorCL"], agg["Baseline"]
+    print(f"\n  -> Writing to the field STEERS the crowd (far-exit usage {bl[2]:.1f} -> {ac[2]:.1f}).")
+    print(f"     OPEN-LOOP (naive) OVER-steers: it flips everyone to the far door, so max-exit share returns")
+    print(f"     to {ac[1]:.2f} (re-imbalanced) vs self-organisation's {so[1]:.2f}.")
+    print(f"     CLOSED-LOOP control FIXES it: depositing in proportion to the live imbalance and backing")
+    print(f"     off as it balances reaches max-exit share {cl[1]:.2f} -- much closer to self-org's {so[1]:.2f}")
+    print(f"     than to the naive over-steer ({ac[1]:.2f}), without flipping the crowd. ('Central control")
+    print(f"     over-steers' -> largely solved by closing the loop.)")
     with open(os.path.join(RES, "actuator.csv"), "w") as f:
         f.write("\n".join(rows) + "\n")
 
-    modes = ["Baseline", "Self-org", "ActuatorNaive"]; x = np.arange(3)
-    fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.2))
-    a1.bar(x, [agg[m][2] for m in modes], color=["#C9C9C9", "#2E6FB7", "#C9A14A"])
+    modes = ["Baseline", "Self-org", "ActuatorNaive", "ActuatorCL"]; x = np.arange(4)
+    cols = ["#C9C9C9", "#2E6FB7", "#C9A14A", "#11a011"]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(12, 4.4))
+    a1.bar(x, [agg[m][2] for m in modes], color=cols)
     a1.set_xticks(x); a1.set_xticklabels(modes, fontsize=8); a1.set_ylabel("far-exit usage")
     a1.set_title("Steering: far-exit usage")
-    a2.bar(x, [agg[m][1] for m in modes], color=["#C9C9C9", "#2E6FB7", "#C9A14A"])
-    a2.axhline(1.0, color="#aa3333", ls="--", lw=0.8)
-    a2.set_xticks(x); a2.set_xticklabels(modes, fontsize=8); a2.set_ylabel("max-exit share (1=imbalanced)")
-    a2.set_title("Over-steering: naive control re-imbalances")
-    fig.suptitle("Field as actuator: steers, but naive control over-steers (self-org wins)", fontsize=12)
+    a2.bar(x, [agg[m][1] for m in modes], color=cols)
+    a2.axhline(1.0, color="#aa3333", ls="--", lw=0.8); a2.axhline(0.5, color="#2BA84A", ls=":", lw=0.8)
+    a2.set_xticks(x); a2.set_xticklabels(modes, fontsize=8); a2.set_ylabel("max-exit share (1=imbalanced, .5=balanced)")
+    a2.set_title("Naive over-steers (→1); closed-loop balances (→.5)")
+    fig.suptitle("Field as actuator: open-loop over-steers, closed-loop control balances", fontsize=12)
     fig.tight_layout(rect=[0, 0, 1, 0.95]); fig.savefig(os.path.join(FIG, "actuator.png"), dpi=140)
     print("-> results/actuator.csv, figures/actuator.png")
 
