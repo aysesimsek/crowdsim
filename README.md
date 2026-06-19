@@ -25,6 +25,9 @@ slowdown with density).
 crowdsim/
   model.py      core: Config, AffectField, Simulation (vectorised numpy)
   navigation.py Dijkstra flow field -> route around walls / through doors to the nearest exit
+  rl.py         multi-agent PPO (torch) for the learned affect-gated arbitration policy
+  evaluate.py   evaluate_layout(): egress + affect-field risk map + hotspots + exit balance
+  recommend.py  closed-loop design recommender: A/B-test interventions, ranked by safety
   metrics.py    Moran's I helpers, Cliff's δ, Mann–Whitney, density/contacts
   scenarios.py  data-driven library of 23 RiMEA-style layouts (arena, walls, spawns, exits, flow)
 experiments/    one runnable script per study (writes results/*.csv + figures/*.png)
@@ -62,11 +65,34 @@ python experiments/phase_transition.py
 | `agent_drain.py` | field autonomy: persists + decays at its own rate after the crowd is removed | ✅ |
 | `coordination.py` | communication-free exit redistribution (field-route vs nearest) | ✅ |
 | `train_rl.py` | learned affect-gated arbitration (multi-agent PPO) — the part that was Unity-only | ✅ |
+| `design_clinic.py` | evaluate a layout + A/B-test ranked safety interventions (the design framework) | ✅ |
 | `actuator.py` | affect field as an actuator; self-organisation beats naive central control | planned |
 | `early_warning.py` | critical-slowing-down early warning of the panic tipping point | planned |
 
 The egress runner confirms the field's spatial structure across **all 23 layouts** (Moran's I ≈ 0.87–0.93
 with the field, exactly 0 without) — pillar-1 generalisation, reproduced in pure Python.
+
+## Design clinic (layout in → diagnosis + solutions out)
+
+The stigmergic affect field is not just a model — its time-averaged value is a **crush-risk / congestion
+map**, which turns the simulator into a layout-evaluation tool:
+
+```python
+from crowdsim import evaluate_layout, recommend
+from crowdsim.scenarios import SCENARIOS
+
+report = evaluate_layout(SCENARIOS["Bottleneck"])     # egress, risk map, hotspots, exit balance
+base, ranked = recommend(SCENARIOS["Bottleneck"])     # A/B-tested interventions, best first
+```
+
+`evaluate_layout` returns evacuated / t50 / t90, the affect-field **risk grid**, congestion **hotspots**
+(local maxima of the risk map), per-exit usage and the binding exit. `recommend` proposes interventions —
+*widen the binding exit*, *add an offset flow-pillar*, *affect-field exit guidance* (operational, no
+rebuild; backed by the coordination result) — simulates each, and ranks them by people evacuated.
+`experiments/design_clinic.py [Scenario]` prints the report and draws the risk heatmap + the ranked A/B
+test. This is the MVP of an "upload your floor-plan, get a safety diagnosis and ranked fixes" framework —
+with the affect field as the novel design diagnostic. (`evaluate_layout(..., policy=net)` also runs the
+learned RL agents on any layout.)
 
 ## Notes
 - Boundary is `"walls"` (clamp + rectangular obstacles) or `"torus"` (periodic).

@@ -11,8 +11,10 @@ EXPERIMENTS = [
     "phase_transition",
     "agent_drain",           # field autonomy (persists + decays after the crowd is removed)
     "coordination",          # communication-free exit redistribution (field-route vs nearest)
+    "design_clinic",         # evaluate a layout + A/B-test ranked safety interventions
     # added as ported:
     # "actuator", "early_warning", "anisotropy",
+    # train_rl is intentionally omitted from run_all (slow torch training; run it directly)
 ]
 
 

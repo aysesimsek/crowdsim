@@ -9,6 +9,9 @@ runs in seconds with no engine round-trips. Two contributions are reproduced:
 """
 from .model import Config, AffectField, Simulation
 from .navigation import NavField
+from .evaluate import evaluate_layout
+from .recommend import recommend
 from . import metrics, scenarios
 
-__all__ = ["Config", "AffectField", "Simulation", "NavField", "metrics", "scenarios"]
+__all__ = ["Config", "AffectField", "Simulation", "NavField", "evaluate_layout", "recommend",
+           "metrics", "scenarios"]
