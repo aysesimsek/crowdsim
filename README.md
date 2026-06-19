@@ -65,6 +65,7 @@ python experiments/phase_transition.py
 | `agent_drain.py` | field autonomy: persists + decays at its own rate after the crowd is removed | ✅ |
 | `coordination.py` | communication-free exit redistribution (field-route vs nearest) | ✅ |
 | `train_rl.py` | learned affect-gated arbitration (multi-agent PPO) — the part that was Unity-only | ✅ |
+| `rl_scenarios.py` | run the trained RL-combined agents across the library (OOD transfer: ~matches physics) | ✅ |
 | `design_clinic.py` | evaluate a layout + A/B-test ranked safety interventions (the design framework) | ✅ |
 | `actuator.py` | affect field as an actuator; self-organisation beats naive central control | planned |
 | `early_warning.py` | critical-slowing-down early warning of the panic tipping point | planned |
