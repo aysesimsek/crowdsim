@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crowd-Safety Design Clinic — MVP</title>
+<style>
+  :root{--ink:#16242b;--muted:#6b7c85;--line:#dce5e7;--teal:#0e7c86;--teal-d:#0a5a62;--bg:#f5f7f8;--card:#fff;}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.5 -apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:#102029;color:#fff;padding:16px 22px}
+  header h1{margin:0;font-size:19px} header p{margin:3px 0 0;color:#9fb3bb;font-size:13px}
+  .wrap{display:grid;grid-template-columns:620px 1fr;gap:18px;padding:18px 22px;align-items:start}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(20,30,60,.05)}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+  .toolbar label{font-size:13px;color:var(--muted)}
+  button,select,input{font:inherit;border:1px solid var(--line);border-radius:8px;padding:6px 11px;background:#fff;cursor:pointer}
+  button.tool.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+  button.go{background:var(--teal-d);color:#fff;border-color:var(--teal-d);font-weight:600}
+  button.alt{background:#fff;color:var(--teal-d);border-color:var(--teal)}
+  input[type=number]{width:58px}
+  canvas{border:1px solid var(--line);border-radius:8px;background:#fbfcfe;cursor:crosshair;touch-action:none}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px}
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+  .stat{background:#eef5f6;border:1px solid #d6e4f5;border-radius:9px;padding:9px 12px}
+  .stat b{display:block;font-size:20px;color:var(--teal-d)} .stat span{font-size:12px;color:var(--muted)}
+  #risk img{width:100%;border:1px solid var(--line);border-radius:8px;margin-top:8px}
+  .rec{border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin:7px 0;display:flex;justify-content:space-between;align-items:center}
+  .rec.best{border-color:var(--teal);background:#eef5f6}
+  .rec .d{font-family:monospace;font-weight:600}
+  .pos{color:#1d7a37} .neg{color:#b5503f}
+  #status{font-size:13px;color:var(--muted);min-height:18px}
+  h3{margin:14px 0 6px;font-size:15px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Crowd-Safety Design Clinic <span style="color:#0e7c86">· MVP</span></h1>
+  <p>Draw or load a floor plan → crush-risk map, safe-occupancy metrics, and A/B-tested fixes.</p>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <div class="toolbar">
+      <label>Preset</label>
+      <select id="preset"><option value="">— load a layout —</option></select>
+      <button class="tool on" data-tool="wall">Wall</button>
+      <button class="tool" data-tool="spawn">Spawn</button>
+      <button class="tool" data-tool="exit">Exit</button>
+      <button class="tool" data-tool="erase">Erase</button>
+      <button id="clear" class="alt">Clear</button>
+    </div>
+    <div class="toolbar">
+      <label>Arena</label><input type="number" id="aw" value="24"> ×
+      <input type="number" id="ah" value="18"> m
+      <label>People</label><input type="number" id="np" value="45">
+      <button id="analyze" class="go">Analyze</button>
+      <button id="suggest" class="alt">Suggest fixes</button>
+    </div>
+    <canvas id="cv" width="588" height="441"></canvas>
+    <div class="hint">Wall/Spawn: drag a rectangle · Exit: click a point · Erase: click an item. Green ★ = exit, blue = spawn, grey = wall.</div>
+  </div>
+
+  <div class="card">
+    <div id="status">Load a preset or draw a layout, then click <b>Analyze</b>.</div>
+    <div class="metrics" id="metrics"></div>
+    <div id="risk"></div>
+    <h3 id="rectitle" style="display:none">Recommended fixes (A/B-tested)</h3>
+    <div id="recs"></div>
+  </div>
+</div>
+
+<script>
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let layout = {width:24, height:18, walls:[], spawns:[], exits:[], goals:null};
+let tool = 'wall', drag = null;
+
+function W(){return +document.getElementById('aw').value}
+function H(){return +document.getElementById('ah').value}
+// world<->pixel
+function sx(){return cv.width / W()}
+function sy(){return cv.height / H()}
+function w2p(x,z){return [(x + W()/2)*sx(), cv.height - (z + H()/2)*sy()]}
+function p2w(px,py){return [px/sx() - W()/2, (cv.height - py)/sy() - H()/2]}
+
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.strokeStyle='#e0e6ea';
+  for(let g=0; g<=W(); g+=2){let [x]=w2p(g-W()/2,0); ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,cv.height);ctx.stroke();}
+  for(let g=0; g<=H(); g+=2){let [,y]=w2p(0,g-H()/2); ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cv.width,y);ctx.stroke();}
+  // spawns
+  ctx.fillStyle='rgba(46,111,183,.28)';
+  for(const s of layout.spawns){let [x0,y0]=w2p(s[0],s[3]),[x1,y1]=w2p(s[1],s[2]); ctx.fillRect(x0,y0,x1-x0,y1-y0);}
+  // walls
+  ctx.fillStyle='#586';
+  for(const wl of layout.walls){let [x,y]=w2p(wl[0]-wl[2]/2, wl[1]+wl[3]/2); ctx.fillRect(x,y,wl[2]*sx(),wl[3]*sy());}
+  // exits
+  for(const e of layout.exits){let [x,y]=w2p(e[0],e[1]); ctx.fillStyle='#19c019';ctx.strokeStyle='#0a0';
+    ctx.beginPath();ctx.arc(x,y,7,0,7);ctx.fill();ctx.stroke();}
+  // drag preview
+  if(drag&&drag.cur){ctx.strokeStyle='#0e7c86';ctx.setLineDash([5,4]);
+    ctx.strokeRect(Math.min(drag.x,drag.cur.x),Math.min(drag.y,drag.cur.y),Math.abs(drag.cur.x-drag.x),Math.abs(drag.cur.y-drag.y));ctx.setLineDash([]);}
+}
+function pos(ev){const r=cv.getBoundingClientRect();return [ev.clientX-r.left, ev.clientY-r.top];}
+cv.addEventListener('pointerdown',ev=>{const [px,py]=pos(ev);
+  if(tool==='exit'){const [x,z]=p2w(px,py); layout.exits.push([+x.toFixed(1),+z.toFixed(1)]); draw(); return;}
+  if(tool==='erase'){erase(px,py); draw(); return;}
+  drag={x:px,y:py,cur:{x:px,y:py}};});
+cv.addEventListener('pointermove',ev=>{if(!drag)return;const [px,py]=pos(ev);drag.cur={x:px,y:py};draw();});
+cv.addEventListener('pointerup',ev=>{if(!drag)return;const [px,py]=pos(ev);
+  let [x0,z0]=p2w(Math.min(drag.x,px),Math.max(drag.y,py)), [x1,z1]=p2w(Math.max(drag.x,px),Math.min(drag.y,py));
+  if(Math.abs(x1-x0)>0.4&&Math.abs(z1-z0)>0.4){
+    if(tool==='wall') layout.walls.push([+( (x0+x1)/2).toFixed(2),+((z0+z1)/2).toFixed(2),+(x1-x0).toFixed(2),+(z1-z0).toFixed(2)]);
+    if(tool==='spawn') layout.spawns.push([+x0.toFixed(1),+x1.toFixed(1),+z0.toFixed(1),+z1.toFixed(1)]);
+  }
+  drag=null; draw();});
+function erase(px,py){const [x,z]=p2w(px,py);
+  layout.exits=layout.exits.filter(e=>Math.hypot(e[0]-x,e[1]-z)>1.2);
+  layout.walls=layout.walls.filter(w=>!(Math.abs(x-w[0])<w[2]/2+.3&&Math.abs(z-w[1])<w[3]/2+.3));
+  layout.spawns=layout.spawns.filter(s=>!(x>s[0]-.3&&x<s[1]+.3&&z>s[2]-.3&&z<s[3]+.3));}
+
+document.querySelectorAll('.tool').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;
+  document.querySelectorAll('.tool').forEach(x=>x.classList.toggle('on',x===b));});
+document.getElementById('clear').onclick=()=>{layout.walls=[];layout.spawns=[];layout.exits=[];layout.goals=null;draw();};
+document.getElementById('aw').oninput=draw; document.getElementById('ah').oninput=draw;
+
+let LIB={};
+fetch('/api/scenarios').then(r=>r.json()).then(d=>{LIB=d;const sel=document.getElementById('preset');
+  Object.keys(d).forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});});
+document.getElementById('preset').onchange=e=>{const s=LIB[e.target.value]; if(!s)return;
+  document.getElementById('aw').value=s.width; document.getElementById('ah').value=s.height;
+  layout={width:s.width,height:s.height,walls:s.walls.map(a=>a.slice()),spawns:s.spawns.map(a=>a.slice()),exits:s.exits.map(a=>a.slice()),goals:s.goals};
+  draw();};
+
+function payload(){return Object.assign({}, layout, {width:W(),height:H(),n:+document.getElementById('np').value});}
+function setStatus(t){document.getElementById('status').innerHTML=t;}
+
+document.getElementById('analyze').onclick=()=>{
+  if(!layout.exits.length){setStatus('⚠ Add at least one <b>exit</b> first.');return;}
+  if(!layout.spawns.length){setStatus('⚠ Add a <b>spawn</b> area (where people start).');return;}
+  setStatus('Simulating… (a few seconds)');
+  fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())})
+   .then(r=>r.json()).then(d=>{
+     if(d.error){setStatus('Error: '+d.error);return;}
+     const m=d.metrics;
+     document.getElementById('metrics').innerHTML=
+       stat(m.evacuated+' / '+m.n,'evacuated in 50 s')+stat(m.t50>0?m.t50+' s':'>50 s','median clearance')+
+       stat(m.peak_density+' /m²','peak density')+stat(m.exit_imbalance,'exit imbalance (1=worst)');
+     document.getElementById('risk').innerHTML='<img src="'+d.risk_png+'">';
+     let hot = m.hotspots.length? m.hotspots.map(h=>'('+h[0]+','+h[1]+')').join(' ') : 'none';
+     setStatus('Done. Congestion hotspots: '+hot+'.  Binding exit #'+m.binding_exit+'.');
+   }).catch(e=>setStatus('Error: '+e));
+};
+document.getElementById('suggest').onclick=()=>{
+  if(!layout.exits.length||!layout.spawns.length){setStatus('⚠ Need a spawn + an exit first.');return;}
+  setStatus('A/B-testing interventions… (slower)');
+  fetch('/api/recommend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())})
+   .then(r=>r.json()).then(d=>{
+     if(d.error){setStatus('Error: '+d.error);return;}
+     document.getElementById('rectitle').style.display='block';
+     document.getElementById('recs').innerHTML=d.recommendations.map((r,i)=>
+       '<div class="rec'+(i===0?' best':'')+'"><span>'+(i===0?'★ ':'')+r.label+'</span>'+
+       '<span class="d '+(r.delta>0?'pos':(r.delta<0?'neg':''))+'">'+r.evac+' ('+(r.delta>=0?'+':'')+r.delta+')</span></div>').join('');
+     setStatus('Baseline '+d.baseline_evac+' evacuated; fixes ranked by people evacuated (Δ vs baseline).');
+   }).catch(e=>setStatus('Error: '+e));
+};
+draw();
+</script>
+</body>
+</html>
