@@ -35,6 +35,7 @@ class Config:
     w_obs: float = 6.0
     w_soc: float = 1.2
     w_cohesion: float = 0.0          # group cohesion (0 = off): pull social-group members to their centroid
+    w_compress: float = 0.0          # body compression (0 = off): linear shove when bodies overlap (crush)
     dist_floor: float = 0.4
     base_speed: float = 1.8
     stressed_speed: float = 2.6
@@ -275,6 +276,11 @@ class Simulation:
         F_phys = drive + interactions
         if c.w_cohesion > 0.0:               # heterogeneous crowds: keep social groups together
             F_phys = F_phys + self._group_cohesion()
+        if c.w_compress > 0.0:               # body compression: agents shove when overlapping (crush)
+            ov = np.maximum(0.0, 2.0 * c.contact_radius - dist)
+            np.fill_diagonal(ov, 0.0)
+            unit = dvec / np.maximum(dist[:, :, None], 1e-9)
+            F_phys = F_phys + c.w_compress * (ov[:, :, None] * unit).sum(axis=1)
         # affect-gated arbitration: lambda = sigma(bias + k_a*load + k_f*fieldP + learned raw gate)
         lam = _sigmoid(c.physics_bias + c.k_lambda_affect * self.load + c.k_lambda_field * fieldp
                        + self.rl_lambda_raw)

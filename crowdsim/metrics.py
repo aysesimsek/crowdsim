@@ -40,6 +40,24 @@ def peak_local_density(pos, radius=1.5):
     return float((near + 1).max() / (np.pi * radius * radius))
 
 
+def crowd_pressure(pos, vel, radius=1.5):
+    """Helbing-style crowd 'pressure' = local density x local velocity variance (a crush predictor).
+    Turbulent stop-go shoving (high local velocity variance) at high density is what kills in crushes;
+    this rises even when static density saturates. Returns the peak over agents."""
+    if len(pos) < 3:
+        return 0.0
+    d = np.linalg.norm(pos[:, None, :] - pos[None, :, :], axis=2)
+    peak = 0.0
+    for i in range(len(pos)):
+        m = d[i] < radius                         # local cluster (includes self at d=0)
+        if m.sum() >= 3:
+            rho = m.sum() / (np.pi * radius * radius)
+            v = vel[m]
+            var = float(((v - v.mean(0)) ** 2).sum(1).mean())   # speed variance in the cluster
+            peak = max(peak, rho * var)
+    return float(peak)
+
+
 def close_pairs(pos, dist=0.45):
     if len(pos) < 2:
         return 0
