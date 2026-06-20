@@ -34,6 +34,7 @@ class Config:
     w_goal: float = 1.6
     w_obs: float = 6.0
     w_soc: float = 1.2
+    w_cohesion: float = 0.0          # group cohesion (0 = off): pull social-group members to their centroid
     dist_floor: float = 0.4
     base_speed: float = 1.8
     stressed_speed: float = 2.6
@@ -156,10 +157,22 @@ class Simulation:
         # RL residual (set by a trained policy; default 0 = pure physics-dominant arbitration):
         self.rl_force = np.zeros((n, 2))     # corrective force u_rl
         self.rl_lambda_raw = np.zeros(n)     # learned raw gate term added inside the lambda sigmoid
+        self.sgroup = np.full(n, -1)         # social group id (-1 = lone individual); for group cohesion
 
     def set_rl(self, force, lambda_raw):
         self.rl_force[:] = force
         self.rl_lambda_raw[:] = lambda_raw
+
+    def _group_cohesion(self):
+        """Pull each social-group member toward its group's centroid (families move together)."""
+        f = np.zeros((self.n, 2))
+        for gid in np.unique(self.sgroup):
+            if gid < 0:
+                continue
+            m = self.sgroup == gid
+            if m.sum() > 1:
+                f[m] = self.cfg.w_cohesion * (self.pos[m].mean(0) - self.pos[m])
+        return f
 
     def set_walls(self, walls):
         self.walls = [tuple(w) for w in walls]
@@ -258,6 +271,8 @@ class Simulation:
         else:                          # weak constant goal force + damping (free-flow ~0.6, no relaxation)
             drive = c.w_goal * ehat - c.weak_drive_damp * self.vel
         F_phys = drive + interactions
+        if c.w_cohesion > 0.0:               # heterogeneous crowds: keep social groups together
+            F_phys = F_phys + self._group_cohesion()
         # affect-gated arbitration: lambda = sigma(bias + k_a*load + k_f*fieldP + learned raw gate)
         lam = _sigmoid(c.physics_bias + c.k_lambda_affect * self.load + c.k_lambda_field * fieldp
                        + self.rl_lambda_raw)
