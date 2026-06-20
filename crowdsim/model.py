@@ -158,6 +158,7 @@ class Simulation:
         self.rl_force = np.zeros((n, 2))     # corrective force u_rl
         self.rl_lambda_raw = np.zeros(n)     # learned raw gate term added inside the lambda sigmoid
         self.sgroup = np.full(n, -1)         # social group id (-1 = lone individual); for group cohesion
+        self.speed_scale = np.ones(n)        # per-agent desired-speed multiplier (1 = normal, <1 = slow/vulnerable)
 
     def set_rl(self, force, lambda_raw):
         self.rl_force[:] = force
@@ -257,7 +258,8 @@ class Simulation:
         interactions, wk, wsum = self._social_force(dist.copy(), dvec)
         fieldp = self._cognition(dist.copy(), wk, wsum, dt)
         # desired speed rises with load (arousal), falls with fatigue
-        vmax = np.maximum(0.25, (c.base_speed + (c.stressed_speed - c.base_speed) * self.load) * (1 - 0.6 * self.fatigue))
+        vmax = np.maximum(0.25, (c.base_speed + (c.stressed_speed - c.base_speed) * self.load)
+                          * (1 - 0.6 * self.fatigue) * self.speed_scale)
         # Helbing driving term: relax velocity toward desired (vmax along the goal direction). This makes
         # free-flow speed approach vmax and supplies the damping, so no separate damping term is needed.
         if self.nav is not None:
