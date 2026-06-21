@@ -134,6 +134,7 @@ document.getElementById('preset').onchange=e=>{const s=LIB[e.target.value]; if(!
 
 function payload(){return Object.assign({}, layout, {width:W(),height:H(),n:+document.getElementById('np').value});}
 function setStatus(t){document.getElementById('status').innerHTML=t;}
+function stat(v,l){return '<div class="stat"><b>'+v+'</b><span>'+l+'</span></div>';}
 
 document.getElementById('analyze').onclick=()=>{
   if(!layout.exits.length){setStatus('⚠ Add at least one <b>exit</b> first.');return;}
