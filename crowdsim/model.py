@@ -42,6 +42,9 @@ class Config:
     contact_friction: float = 3.0    # granular friction: damp velocity above the jam density (jamming branch)
     friction_range: float = 1.5      # radius (m) for the local-density estimate that gates the friction
     jam_density: float = 3.0         # friction is zero below this local density, ramps above it (crush onset)
+    deformable: bool = False         # high-pressure body deformation: effective radius shrinks under crush,
+    r_min: float = 0.16              #   letting density exceed geometric packing (Ø0.32 -> ~11 ped/m²); the
+    compress_density: float = 3.0    #   radius ramps contact_radius->r_min over ~2 ped/m² above this onset
     base_speed: float = 1.8
     stressed_speed: float = 2.6
     max_accel: float = 8.0
@@ -165,6 +168,8 @@ class Simulation:
         self.rl_lambda_raw = np.zeros(n)     # learned raw gate term added inside the lambda sigmoid
         self.sgroup = np.full(n, -1)         # social group id (-1 = lone individual); for group cohesion
         self.speed_scale = np.ones(n)        # per-agent desired-speed multiplier (1 = normal, <1 = slow/vulnerable)
+        self.r_eff = np.full(n, self.cfg.contact_radius)   # effective body radius (shrinks under crush if deformable)
+        self._crush = np.zeros(n)            # per-agent crush fraction 0..1 (collapses personal space under deformation)
 
     def set_rl(self, force, lambda_raw):
         self.rl_force[:] = force
@@ -215,6 +220,7 @@ class Simulation:
         unit = dvec / np.maximum(dist[:, :, None], 1e-6)     # from neighbour to agent
         sep = (mag[:, :, None] * unit).sum(axis=1)
         sep = c.w_sep * beta[:, None] * sep
+        sep = sep * (1.0 - self._crush)[:, None]             # personal space collapses under crush (deformable)
         # social flow: kernel-weighted mean of neighbour velocities (alignment/herding)
         wk = np.exp(-c.kappa * np.where(np.isinf(dist), 1e9, dist))
         wk[np.isinf(dist)] = 0.0
@@ -261,6 +267,15 @@ class Simulation:
         if self.n == 0:
             self.field.step(dt); return
         dvec, dist = self._pairwise()
+        if c.deformable:                     # bodies compress under crush -> effective radius shrinks
+            rr = c.friction_range
+            ld = np.maximum(0.0, (dist < rr).sum(axis=1) - 1.0) / (np.pi * rr * rr)
+            frac = np.clip((ld - c.compress_density) / 2.0, 0.0, 1.0)   # full compression ~2 ped/m² above onset
+            self.r_eff = c.contact_radius - (c.contact_radius - c.r_min) * frac
+            self._crush = frac
+        else:
+            self.r_eff = np.full(self.n, c.contact_radius)
+            self._crush = np.zeros(self.n)
         interactions, wk, wsum = self._social_force(dist.copy(), dvec)
         fieldp = self._cognition(dist.copy(), wk, wsum, dt)
         # desired speed rises with load (arousal), falls with fatigue
@@ -282,7 +297,7 @@ class Simulation:
         if c.w_cohesion > 0.0:               # heterogeneous crowds: keep social groups together
             F_phys = F_phys + self._group_cohesion()
         if c.w_compress > 0.0:               # body compression: agents shove when overlapping (crush)
-            ov = np.maximum(0.0, 2.0 * c.contact_radius - dist)
+            ov = np.maximum(0.0, (self.r_eff[:, None] + self.r_eff[None, :]) - dist)
             np.fill_diagonal(ov, 0.0)
             unit = dvec / np.maximum(dist[:, :, None], 1e-9)
             F_phys = F_phys + c.w_compress * (ov[:, :, None] * unit).sum(axis=1)
@@ -326,7 +341,7 @@ class Simulation:
             np.clip(self.pos[:, 1], -hz + m, hz - m, out=self.pos[:, 1])
 
     def _resolve_overlaps(self):
-        minD = 2 * self.cfg.contact_radius
+        minD = self.r_eff[:, None] + self.r_eff[None, :]    # per-pair body size (shrinks under crush)
         d = self.pos[:, None, :] - self.pos[None, :, :]
         dist = np.linalg.norm(d, axis=2)
         np.fill_diagonal(dist, np.inf)

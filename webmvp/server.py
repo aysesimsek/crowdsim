@@ -99,6 +99,13 @@ class H(BaseHTTPRequestHandler):
                 self._send(200, f.read(), "text/html; charset=utf-8")
         elif self.path == "/api/scenarios":
             self._send(200, json.dumps(library()))
+        elif self.path == "/viewer3d.html":
+            p = os.path.join(HERE, "viewer3d.html")
+            if os.path.exists(p):
+                with open(p, "rb") as f:
+                    self._send(200, f.read(), "text/html; charset=utf-8")
+            else:
+                self._send(404, json.dumps({"error": "run experiments/export_sim.py to build the 3D viewer"}))
         else:
             self._send(404, json.dumps({"error": "not found"}))
 
