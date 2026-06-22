@@ -35,4 +35,11 @@ sim = post("/api/simulate", {"width": s["width"], "height": s["height"], "n": 45
 print(f"  simulate Bottleneck: frames={len(sim['frames'])}  agents={len(sim['frames'][0])}  "
       f"peak={sim['peak']}  evac={sim['evacuated']}/{sim['n']}  dt={sim['dt']}")
 assert len(sim["frames"]) > 5 and len(sim["dens"]) == len(sim["frames"]) and len(sim["evac_frame"]) == sim["n"]
+assert "Itaewon" in lib and lib["Itaewon"]["n"], "Itaewon preset missing / no suggested n"
+it = lib["Itaewon"]
+sim2 = post("/api/simulate", {"width": it["width"], "height": it["height"], "n": it["n"], "walls": it["walls"],
+                              "spawns": it["spawns"], "exits": it["exits"], "goals": it["goals"]})
+print(f"  simulate Itaewon (n={it['n']}): frames={len(sim2['frames'])}  agents={len(sim2['frames'][0])}  "
+      f"peak={sim2['peak']} ped/m² (crush regime)")
+assert sim2["peak"] >= 7.0, f"Itaewon should reach crush density, got {sim2['peak']}"
 print("SELFTEST PASS")

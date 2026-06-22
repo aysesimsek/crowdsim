@@ -18,6 +18,7 @@ class Scenario:
     exits: list = field(default_factory=list)      # (x, z) exit / door points
     arrows: list = field(default_factory=list)     # (x, z, dx, dz) intended flow
     goals: list = None                             # per-spawn-group exit indices; None => every exit (nearest)
+    suggested_n: int = None                        # default crowd size for the MVP (real-crush cases need many)
 
 
 def vwall(x, zmin, zmax, gaps=(), gap_half=0.7, t=0.5):
@@ -190,6 +191,19 @@ def _build():
 
     S["DiagonalRoom"] = Scenario("DiagonalRoom", "diagonal crossing to a corner exit", 20, 20,
         spawns=[(-9, -4, 4, 9)], exits=[(9, -9)], arrows=[(-6, 6, 7, -7)])
+
+    # --- real disasters (rebuilt from published dimensions; load with many people to see the crush) ---
+    S["Itaewon"] = Scenario("Itaewon", "Itaewon 2022 — counter-flow crush (real 45×3.2 m alley)", 48, 14,
+        walls=[(0, 1.85, 45, 0.5), (0, -1.85, 45, 0.5)],            # 3.2 m alley (top/bottom walls)
+        spawns=[(-22, -12, -1.4, 1.4), (12, 22, -1.4, 1.4)],        # two opposing streams
+        exits=[(23, 0), (-23, 0)], goals=[[0], [1]],                # left->right end, right->left end (collide mid)
+        arrows=[(-15, 0.8, 10, 0), (15, -0.8, -10, 0)], suggested_n=240)
+
+    S["LoveParade"] = Scenario("LoveParade", "Love Parade 2010 — counter-flow through a single ramp", 36, 24,
+        walls=vwall(0, -12, 12, gaps=[0], gap_half=3.0),            # one 6 m access ramp in a dividing wall
+        spawns=[(-15, -8, -10, 10), (8, 15, -10, 10)],              # festival side <-> approach side
+        exits=[(16, 0), (-16, 0)], goals=[[0], [1]],                # both cross through the one ramp
+        arrows=[(-10, 0, 8, 0), (10, 0, -8, 0)], suggested_n=200)
 
     return S
 

@@ -147,6 +147,7 @@ fetch('/api/scenarios').then(r=>r.json()).then(d=>{LIB=d;const sel=document.getE
   Object.keys(d).forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});});
 document.getElementById('preset').onchange=e=>{const s=LIB[e.target.value]; if(!s)return;
   document.getElementById('aw').value=s.width; document.getElementById('ah').value=s.height;
+  if(s.n) document.getElementById('np').value=s.n;   // real-crush scenarios suggest a big crowd
   layout={width:s.width,height:s.height,walls:s.walls.map(a=>a.slice()),spawns:s.spawns.map(a=>a.slice()),exits:s.exits.map(a=>a.slice()),goals:s.goals};
   draw();};
 

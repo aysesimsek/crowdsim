@@ -85,7 +85,7 @@ def simulate(layout):
     sc = scenario_from(layout)
     n = int(layout.get("n", NAGENTS))
     cfg = Config(width=sc.width, height=sc.height, boundary="walls", max_value=50.0,
-                 field_gain=1.10, field_deposit_gain=0.7)
+                 field_gain=1.10, field_deposit_gain=0.7, deformable=True)  # density-gated crush (no-op below ~3/m²)
     rng = np.random.default_rng(0)
     sim = Simulation(cfg, rng); sim.set_walls(sc.walls)
     pos, grp = _spawn(sc, n, rng); m = len(pos); sim.spawn(pos)
@@ -127,7 +127,7 @@ def library():
     for name, sc in SCENARIOS.items():
         lib[name] = {"note": sc.note, "width": sc.width, "height": sc.height,
                      "walls": [list(w) for w in sc.walls], "spawns": [list(s) for s in sc.spawns],
-                     "exits": [list(e) for e in sc.exits], "goals": sc.goals}
+                     "exits": [list(e) for e in sc.exits], "goals": sc.goals, "n": sc.suggested_n}
     return lib
 
 
