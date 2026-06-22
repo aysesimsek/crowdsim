@@ -67,6 +67,26 @@ MECH_SVG = ('<div class="aid"><span class="aidbadge">' + L("Mekanizma şeması",
    "Loop: a person feels stress → deposits a trace → it diffuses and decays (reaction–diffusion) → others read it and change their decision. No direct communication.") + '</div></div>\n')
 
 
+ARCH_SVG = ('<div class="aid"><span class="aidbadge">' + L("Mimari — bileşenler nasıl birleşir","Architecture — how the components combine") + '</span>'
+ '<svg viewBox="0 0 760 210" xmlns="http://www.w3.org/2000/svg">'
+ '<defs><marker id="ma" markerWidth="9" markerHeight="9" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#0A5A62"/></marker></defs>'
+ '<style>.b2{fill:#fff;stroke:#0E7C86;stroke-width:1.5}.g2{fill:#E6F0F1;stroke:#0A5A62;stroke-width:1.8}.p2{fill:#FBF1E1;stroke:#A8691F;stroke-width:1.5}.t2{font:600 12.5px Inter,sans-serif;fill:#16242B}.s2{font:11px IBM Plex Mono,monospace;fill:#6B7C85}.a2{stroke:#0A5A62;stroke-width:1.7;fill:none;marker-end:url(#ma)}</style>'
+ '<rect class="b2" x="10" y="12" width="184" height="44" rx="9"/><text class="t2" x="102" y="31" text-anchor="middle">Sosyal-Kuvvet</text><text class="s2" x="102" y="47" text-anchor="middle">fizik · kuvvet ODE’leri</text>'
+ '<rect class="b2" x="10" y="83" width="184" height="44" rx="9"/><text class="t2" x="102" y="102" text-anchor="middle">Duygu Alanı Φ</text><text class="s2" x="102" y="118" text-anchor="middle">reaksiyon-difüzyon PDE</text>'
+ '<rect class="b2" x="10" y="154" width="184" height="44" rx="9"/><text class="t2" x="102" y="173" text-anchor="middle">Navigasyon</text><text class="s2" x="102" y="189" text-anchor="middle">Dijkstra rota</text>'
+ '<rect class="g2" x="302" y="72" width="178" height="66" rx="10"/><text class="t2" x="391" y="96" text-anchor="middle">λ-kapı (harman)</text><text class="s2" x="391" y="114" text-anchor="middle">ivme = λ·fizik</text><text class="s2" x="391" y="129" text-anchor="middle">+ (1−λ)·PPO</text>'
+ '<rect class="p2" x="302" y="162" width="178" height="40" rx="9"/><text class="t2" x="391" y="180" text-anchor="middle">PPO politikası</text><text class="s2" x="391" y="195" text-anchor="middle">paylaşımlı MLP · koşullu</text>'
+ '<rect class="b2" x="566" y="82" width="184" height="46" rx="9"/><text class="t2" x="658" y="101" text-anchor="middle">İvme → hareket</text><text class="s2" x="658" y="117" text-anchor="middle">+ alana iz bırakır</text>'
+ '<path class="a2" d="M194 34 C252 34, 250 92, 300 98"/>'
+ '<path class="a2" d="M194 105 L300 105"/>'
+ '<path class="a2" d="M194 176 C252 176, 250 124, 300 118"/>'
+ '<path class="a2" d="M391 162 L391 140"/>'
+ '<path class="a2" d="M480 105 L564 105"/>'
+ '</svg><div class="aidcap">' +
+ L("Üç fizik/algoritma bileşeni (solda) λ-kapısında harmanlanır; öğrenilmiş PPO düzeltmesi (altta, koşullu) aynı kapıya girer; çıktı ivmedir — ajan hareket eder ve alana yeni iz bırakır (geri besleme). λ = σ(stres): stres arttıkça refleks/öğrenme dengesi kayar.",
+   "Three physics/algorithm components (left) are blended at a λ-gate; the learned PPO correction (bottom, conditional) enters the same gate; the output is acceleration — the agent moves and deposits new trace into the field (feedback). λ = σ(stress): stress shifts the reflex/learning balance.") + '</div></div>\n')
+
+
 def main():
     H = ['<!doctype html><html data-lang="tr"><head><meta charset="utf-8">',
          '<meta name="viewport" content="width=device-width, initial-scale=1">',
@@ -118,9 +138,9 @@ def main():
     # 2. Approach
     body = (LEAD("Önce modelin ne olduğunu sade anlatalım; sonra teknik kuralları ve varsayımları kaynaklarıyla verelim.",
         "Let us first say plainly what the model is; then give the technical rules and assumptions with citations.")
-     + H3("Model nedir? — teknik olarak","What is the model? — technically")
-     + P("Sezgi: bir kalabalık “video oyunu” — her yaya tek tek canlandırılan bir ajan, davranış topluluktan kendiliğinden doğar. Teknik olarak bu bir <strong>mikroskobik, ajan-tabanlı simülasyon</strong>dur; <strong>tek bir derin sinir ağı değildir</strong>, dört bileşenin birleşimidir:",
-        "Intuition: a crowd “video game” — each pedestrian is an individually-simulated agent, and behaviour emerges from the collective. Technically it is a <strong>microscopic, agent-based simulation</strong>; <strong>not a single deep neural network</strong>, but a combination of four components:")
+     + H3("Modelin yapısı","Model structure")
+     + P("Model <strong>mikroskobik, ajan-tabanlı bir simülasyondur</strong>: her yaya, basit kurallarla hareket eden tek bir ajandır ve topluluk davranışı (sıkışma, kuyruk, panik) bu ajanlardan kendiliğinden doğar. Tek bir uçtan-uca sinir ağı değildir; dört bileşenin birleşimidir:",
+        "The model is a <strong>microscopic, agent-based simulation</strong>: each pedestrian is a single agent moving by simple rules, and collective behaviour (congestion, queues, panic) emerges from them. It is not a single end-to-end neural network; it combines four components:")
      + '  <ul class="clean">\n    <li>'
      + L(f"<strong>Lokomosyon (hareket):</strong> Helbing’in <em class=\"term\">Sosyal-Kuvvet Modeli</em> — her ajan, hedefe çekim ile komşulardan ve duvarlardan itme kuvvetlerinin toplamıyla, sürekli uzayda Newton-tipi ivmeyle hareket eder (kuvvet-tabanlı diferansiyel denklemler){CITE(2)}.",
          f"<strong>Locomotion:</strong> Helbing’s <em class=\"term\">Social-Force Model</em> — each agent moves by Newton-like acceleration from goal attraction plus repulsion from neighbours and walls, in continuous space (force-based ODEs){CITE(2)}.")
@@ -134,17 +154,17 @@ def main():
      + L(f"<strong>Karar harmanı (2. sütun):</strong> ivme = λ·(fizik) + (1−λ)·(öğrenilmiş düzeltme); λ, strese göre sigmoid bir <em>kapı</em> ile ayarlanır. Öğrenilmiş kısım küçük bir <em class=\"term\">PPO aktör-kritik</em> ağı (tüm ajanlarca paylaşılan bir MLP){CITE(10,9)}. <strong>Ama fizik baskındır</strong> — PPO koşullu bir eklentidir (Bölüm 5).",
          f"<strong>Decision blend (pillar 2):</strong> acceleration = λ·(physics) + (1−λ)·(learned correction); λ is set by a sigmoid <em>gate</em> on stress. The learned part is a small <em class=\"term\">PPO actor–critic</em> network (an MLP shared across all agents){CITE(10,9)}. <strong>But physics dominates</strong> — PPO is a conditional add-on (Section 5).")
      + '</li>\n  </ul>\n'
-     + NOTE("tip","“CNN mi, PPO mu?” — kısa cevap","“CNN or PPO?” — short answer",
-        "Çekirdek bir <strong>derin öğrenme modeli değildir</strong>: klasik fizik (kuvvet ODE’leri) + bir alan PDE’si + grafik-araması (Dijkstra). <strong>CNN yoktur</strong> — girdi bir imge değil, ajan-başına küçük bir özellik vektörü (konum, hız, yük, alan, hedef-yön…). Tek makine-öğrenmesi parçası, isteğe bağlı küçük bir <strong>PPO</strong> politikasıdır ve o da fizik tarafından domine edilir. Yani: ağırlıkla fizik-tabanlı, hafif ve koşullu bir RL katmanıyla.",
-        "The core is <strong>not a deep-learning model</strong>: classical physics (force ODEs) + a field PDE + graph search (Dijkstra). <strong>No CNN</strong> — the input is not an image but a small per-agent feature vector (position, velocity, load, field, goal direction…). The only machine-learning piece is an optional small <strong>PPO</strong> policy, and even that is dominated by physics. In short: predominantly physics-based, with a light, conditional RL layer.")
+     + ARCH_SVG
+     + P("Mimari ağırlıkla <strong>fizik-tabanlıdır</strong> (kuvvet denklemleri + alan PDE’si + grafik araması); makine öğrenmesi yalnızca küçük ve koşullu PPO katmanında yer alır. Görüntü-tabanlı bir ağ (örn. evrişimli ağ) kullanılmaz; politikanın girdisi ajan-başına bir özellik vektörüdür (konum, hız, yük, alan değeri, hedef-yön).",
+        "The architecture is predominantly <strong>physics-based</strong> (force equations + a field PDE + graph search); machine learning appears only in the small, conditional PPO layer. No image-based (e.g. convolutional) network is used; the policy’s input is a per-agent feature vector (position, velocity, load, field value, goal direction).")
      + H3("Varsayım 1 — Duygu stigmerjik bir alandır","Assumption 1 — Affect is a stigmergic field")
      + P(f"Karıncalar yere feromon bırakıp birbirini dolaylı yönlendirir; bu ortam-aracılı koordinasyona <em class=\"term\">stigmerji</em> denir{CITE(8)}. Stresi aynı şekilde modelliyoruz: birey iz bırakır, iz komşu hücrelere <strong>yayılır</strong> ve zamanla <strong>söner</strong> — klasik bir <em class=\"term\">reaksiyon-difüzyon</em> denklemi: ∂Φ/∂t = D∇²Φ − kΦ + S.",
         f"Ants leave pheromone and steer each other indirectly; this environment-mediated coordination is <em class=\"term\">stigmergy</em>{CITE(8)}. We model stress the same way: a person deposits a trace, it <strong>diffuses</strong> and <strong>decays</strong> — a classic <em class=\"term\">reaction–diffusion</em> equation: ∂Φ/∂t = D∇²Φ − kΦ + S.")
-     + NOTE("tip","Denklemi sökelim (korkmaya gerek yok)","Unpacking the equation (don’t panic)",
+     + NOTE("tip","Denklemin anlamı","What the equation means",
         "Φ = bir noktadaki stres düzeyi. Sol taraf (∂Φ/∂t) “stres zamanla nasıl değişir?”i sorar. Sağ taraf üç şeyi toplar: <strong>D∇²Φ</strong> = stres komşu hücrelere yayılır (D = yayılma hızı); <strong>−kΦ</strong> = zamanla söner/unutulur (k = unutma hızı); <strong>+S</strong> = stresli insanlar yeni iz ekler (S = kaynak). Tek cümleyle: <em>stres yayılır, söner ve insanlarca beslenir.</em>",
         "Φ = the stress level at a point. The left side (∂Φ/∂t) asks “how does stress change over time?”. The right side adds three things: <strong>D∇²Φ</strong> = stress spreads to neighbouring cells (D = spread rate); <strong>−kΦ</strong> = it fades/forgets over time (k = forgetting rate); <strong>+S</strong> = stressed people add new trace (S = source). In one line: <em>stress spreads, fades, and is fed by people.</em>")
      + MECH_SVG
-     + NOTE("tip","Neden “alan”, “bulaşma” değil?","Why a “field”, not “contagion”?",
+     + NOTE("tip","Alan ile bulaşmanın farkı","Field vs. contagion",
         "Bulaşmada kişi gidince etkisi anında sıfırlanır. Alanda iz <strong>kalır</strong> (ölçümümüzde 2 s sonra %48). Alan, kalabalığın mekâna ait hafızasıdır — özgün katkımızın çekirdeği.",
         "In contagion a person’s effect vanishes instantly. In a field the trace <strong>lingers</strong> (48% after 2 s in our measurement). The field is the crowd’s memory of the place — the core of our novelty.")
      + H3("Varsayım 2 — Yürüme refleks + düşünme harmanıdır","Assumption 2 — Walking is a reflex + deliberation blend")
@@ -198,7 +218,7 @@ def main():
      + NOTE("flag","Dürüst sınır","Honest limit",
         f"Gerçek İtaewon CCTV verisi açık değildir (gizlilik); eşleştiğimiz 9.95 başka bir hidrodinamik modelin tahminidir{CITE(14)}. Yani gerçek geometri + yayımlanmış yeniden-üretimle kıyasladık, ham sensör verisiyle değil.",
         f"Real Itaewon CCTV data is not public (privacy); the 9.95 we matched is another hydrodynamic model's estimate{CITE(14)}. We compared real geometry + a published reconstruction, not raw sensor data."))
-    H.append(SEC("dogrulama","03 · Doğrulama","03 · Validation","Model gerçek mi?","Is the model real?", body))
+    H.append(SEC("dogrulama","03 · Doğrulama","03 · Validation","Gerçek veriyle doğrulama","Validation against real data", body))
 
     # 4. Findings 1
     body = (LEAD("Birinci sütun (AS1) en güçlü ve en özgün katkıdır: kalabalık alanı okuyarak iletişimsiz koordine olur, ve panik bir faz geçişi gibi davranır.",
@@ -221,7 +241,7 @@ def main():
         ("Alan, kalabalık gidince <em>kalır</em> mı — yani bir “hafıza” mıdır?","Does the field <em>persist</em> after the crowd leaves — is it a “memory”?"),
         ("16×16 m torus; 45 ajan 25 s milling (3 s’de bir yeni hedef) ile alanı kurar; sonra TÜM ajanlar anında silinir; alan 12 s özerk evrilir (yalnız sönüm, decay k = 0.35); Φ ortalamasından üstel sönüm hızı fit edilir.","16×16 m torus; 45 agents mill for 25 s (new target every 3 s) building the field; then ALL agents are removed at once; the field evolves autonomously for 12 s (decay only, k = 0.35); the exponential decay rate is fit from the mean Φ."),
         ("k ≈ 0.35/s, yarı-ömür ~2 s; 2 s sonra izin %48’i kalır (bulaşma modelinde 0). Alan bir hafızadır — özgünlüğün somut kanıtı.","k ≈ 0.35/s, half-life ~2 s; 48% of the trace remains after 2 s (0 in a contagion model). The field is a memory — concrete evidence for the novelty."))
-     + H3("Panik bir faz geçişidir + erken uyarı","Panic is a phase transition + early warning")
+     + H3("Faz geçişi ve erken uyarı","Phase transition and early warning")
      + FIG("phase.png","Phase transition",
         ("Panik faz geçişi: düzen parametresi + duyarlılık.","Panic phase transition: order parameter + susceptibility."),
         ("Panik bireysel mi, yoksa kalabalığın kolektif bir hâl değişimi (faz geçişi) mi?","Is panic individual, or a collective state change of the crowd (a phase transition)?"),
@@ -251,7 +271,7 @@ def main():
      + NOTE("warn","Dürüst negatif","Honest negative",
         f"Alanın yön bilgisini standart uzaysal istatistik <em class=\"term\">Moran’s I</em> (komşu hücrelerin ne kadar benzeştiğini özetler{CITE(6)}) ile görünür kılamadık; doğru gözlemci yönlü-otokorelasyondur. Açıkça yazıyoruz.",
         f"We could not surface the field's directionality with the standard spatial statistic <em class=\"term\">Moran's I</em> (which summarises how similar neighbouring cells are{CITE(6)}); the right observable is directional autocorrelation. We state it openly."))
-    H.append(SEC("alan","04 · Bulgu 1","04 · Finding 1","Duygu alanı işliyor","The affect field works", body))
+    H.append(SEC("alan","04 · Bulgu 1","04 · Finding 1","Duygu alanı: koordinasyon, özerklik ve faz geçişi","The affect field: coordination, autonomy and phase transition", body))
 
     # 5. Findings 2
     body = (LEAD("İkinci sütun (AS2): refleks ile düşünmenin harmanı bir hız değil, bir sağlamlık mekanizmasıdır — refleksin kilitlendiği tehlikeli rejimde devreye girer.",
@@ -277,7 +297,7 @@ def main():
      + NOTE("warn","Dürüst kapsam","Honest scope",
         "Harman garantili bir kazanç değil; tehlikeli (kilitlenme) rejimde güçlü, kolayda nötr. Koşullu ama büyük bir sağlamlık kazancı.",
         "The blend is not a guaranteed win; strong in the dangerous (deadlock) regime, neutral when easy. A conditional but large robustness gain."))
-    H.append(SEC("karar","05 · Bulgu 2","05 · Finding 2","Çift-süreç karar (refleks + düşünme)","Dual-process decision (reflex + deliberation)", body))
+    H.append(SEC("karar","05 · Bulgu 2","05 · Finding 2","Çift-süreç karar mimarisi","Dual-process decision architecture", body))
 
     # 6. Tool
     body = (LEAD("Bütün bunları somut bir ürüne çevirdik: plan çiz/yükle → ezilme-risk haritası, güvenli kapasite, A/B test edilmiş düzeltmeler. Gerçek senaryolar hazır, simülasyon 3D’de canlı.",
@@ -329,7 +349,7 @@ def main():
         ("Bulgular özenle ayarlanmış bir parametre setine mi asılı, yoksa gürbüz mü?","Do the findings hinge on a tuned parameter set, or are they robust?"),
         ("Bottleneck senaryosu, N = 45, 3 tohum, 50 s; 6 çekirdek parametre (field_gain, decay, diffusion, deposit_gain, contagion_gain, calm_gain) tek tek ±%40 oynatıldı; Moran’s I (uzaysal yapı) + tahliye değişimi; %95 güven aralığı.","Bottleneck scenario, N = 45, 3 seeds, 50 s; each of 6 core parameters (field_gain, decay, diffusion, deposit_gain, contagion_gain, calm_gain) varied ±40%; change in Moran's I (spatial structure) + evacuation; 95% confidence intervals."),
         ("En etkili knob (difüzyon) bile çıktıyı sağlamlık eşiğinin (0.15) çok altında oynatır; Moran’s I ~0.93 sabit kalır. Bulgular tek parametreye asılı değil, gürbüz.","Even the most influential knob (diffusion) moves the output far below the robustness threshold (0.15); Moran's I stays ~0.93. The findings don't hinge on one parameter — robust.")))
-    H.append(SEC("saglamlik","07 · Sağlamlık","07 · Robustness","Her şeyi yeniden doğruladık","We re-verified everything", body))
+    H.append(SEC("saglamlik","07 · Sağlamlık","07 · Robustness","Sağlamlık ve yeniden-doğrulama","Robustness and re-verification", body))
 
     # 8. Contribution
     body = (P("Bu bölümün özgün katkısı üç katmanlıdır:","The novel contribution of this chapter has three layers:")
