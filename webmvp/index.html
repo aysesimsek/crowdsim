@@ -56,6 +56,7 @@
       <label>People</label><input type="number" id="np" value="45">
       <button id="analyze" class="go">Analyze</button>
       <button id="suggest" class="alt">Suggest fixes</button>
+      <button id="sim3d" class="alt">▶ 3D Sim</button>
     </div>
     <canvas id="cv" width="588" height="441"></canvas>
     <div class="hint">Wall/Spawn: drag a rectangle · Exit: click a point · Erase: click an item. Green ★ = exit, blue = spawn, grey = wall.</div>
@@ -67,6 +68,23 @@
     <div id="risk"></div>
     <h3 id="rectitle" style="display:none">Recommended fixes (A/B-tested)</h3>
     <div id="recs"></div>
+  </div>
+</div>
+
+<div id="ov" style="display:none;position:fixed;inset:0;z-index:50;background:#0d1117">
+  <div id="ov3d" style="position:absolute;inset:0"></div>
+  <div style="position:absolute;left:14px;top:14px;color:#e6edf3;background:rgba(20,26,34,.84);padding:11px 13px;border-radius:9px;font-size:13px;max-width:300px;line-height:1.45">
+    <b>3D crowd playback</b> <span style="color:#8b949e">— your layout</span><br>
+    agents coloured by local density:
+    <span style="color:#58a6ff">low</span> → <span style="color:#fec44f">dense</span> → <span style="color:#e31a1c">crush</span><br>
+    <span style="color:#8b949e">drag = orbit · scroll = zoom · right-drag = pan</span><br>
+    peak density <b id="ov_pk">–</b> ped/m² · evacuated <b id="ov_ev">–</b>
+  </div>
+  <div style="position:absolute;left:0;right:0;bottom:0;background:rgba(20,26,34,.92);padding:9px 13px;display:flex;gap:11px;align-items:center">
+    <button id="ov_pp" style="background:#238636;color:#fff;border:0;border-radius:6px;padding:7px 13px">⏸ Pause</button>
+    <input id="ov_sl" type="range" min="0" value="0" style="flex:1">
+    <span id="ov_t" style="color:#e6edf3;min-width:78px;text-align:right;font-variant-numeric:tabular-nums">0.0 s</span>
+    <button id="ov_x" style="background:#a3402f;color:#fff;border:0;border-radius:6px;padding:7px 13px">✕ Close</button>
   </div>
 </div>
 
@@ -165,6 +183,86 @@ document.getElementById('suggest').onclick=()=>{
      setStatus('Baseline '+d.baseline_evac+' evacuated; fixes ranked by people evacuated (Δ vs baseline).');
    }).catch(e=>setStatus('Error: '+e));
 };
+
+// ---- 3D playback of the simulation ----
+let V3 = null;
+function ramp3(d){ const t=Math.max(0,Math.min(1,d/9));
+  const s=[[0.17,0.5,0.72],[0.5,0.8,0.73],[0.99,0.77,0.31],[0.89,0.10,0.11]];
+  const x=t*3,i=Math.min(2,Math.floor(x)),f=x-i;
+  return [s[i][0]+(s[i+1][0]-s[i][0])*f, s[i][1]+(s[i+1][1]-s[i][1])*f, s[i][2]+(s[i+1][2]-s[i][2])*f]; }
+function init3D(SIM){
+  const mount=document.getElementById('ov3d');
+  if(V3) V3.dispose(); mount.innerHTML='';
+  const span=Math.max(SIM.w,SIM.h);
+  const scene=new THREE.Scene(); scene.background=new THREE.Color(0x0d1117);
+  scene.fog=new THREE.Fog(0x0d1117, span*1.3, span*3.6);
+  const cam=new THREE.PerspectiveCamera(55, mount.clientWidth/mount.clientHeight, 0.1, 1000);
+  cam.position.set(0, span*0.85, span*0.95);
+  const ren=new THREE.WebGLRenderer({antialias:true});
+  ren.setSize(mount.clientWidth, mount.clientHeight); ren.setPixelRatio(Math.min(2,devicePixelRatio));
+  mount.appendChild(ren.domElement);
+  const ctr=new THREE.OrbitControls(cam, ren.domElement); ctr.target.set(0,0,0); ctr.update();
+  scene.add(new THREE.AmbientLight(0xffffff,.7));
+  const dl=new THREE.DirectionalLight(0xffffff,.85); dl.position.set(span*.4,span,span*.3); scene.add(dl);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(SIM.w,SIM.h), new THREE.MeshStandardMaterial({color:0x161b22}));
+  floor.rotation.x=-Math.PI/2; scene.add(floor);
+  scene.add(new THREE.GridHelper(span, Math.round(span), 0x30363d, 0x21262d));
+  const wmat=new THREE.MeshStandardMaterial({color:0x586069});
+  SIM.walls.forEach(([cx,cz,sx,sz])=>{const mm=new THREE.Mesh(new THREE.BoxGeometry(sx,1.6,sz),wmat); mm.position.set(cx,0.8,cz); scene.add(mm);});
+  const emat=new THREE.MeshStandardMaterial({color:0x19e019,emissive:0x0a3a0a});
+  SIM.exits.forEach(([x,z])=>{const mm=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,0.12,18),emat); mm.position.set(x,0.06,z); scene.add(mm);});
+  const N=SIM.frames[0].length;
+  const mesh=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.22,0.22,1.7,8), new THREE.MeshStandardMaterial({}), N);
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(mesh);
+  const dummy=new THREE.Object3D(), col=new THREE.Color(), ov_t=document.getElementById('ov_t');
+  function setFrame(k){ const P=SIM.frames[k], D=SIM.dens[k];
+    for(let i=0;i<N;i++){ const ev=SIM.evac_frame[i];
+      if(ev>=0 && k>=ev) dummy.position.set(0,-50,0); else dummy.position.set(P[i][0],0.85,P[i][1]);
+      dummy.updateMatrix(); mesh.setMatrixAt(i,dummy.matrix);
+      const c=ramp3(D[i]); col.setRGB(c[0],c[1],c[2]); mesh.setColorAt(i,col); }
+    mesh.instanceMatrix.needsUpdate=true; if(mesh.instanceColor) mesh.instanceColor.needsUpdate=true;
+    ov_t.textContent=(k*SIM.dt).toFixed(1)+' s'; }
+  const sl=document.getElementById('ov_sl'); sl.max=SIM.frames.length-1; sl.value=0;
+  const pp=document.getElementById('ov_pp'); pp.textContent='⏸ Pause';
+  let frame=0, playing=true, acc=0, last=performance.now(), raf=null, live=true;
+  pp.onclick=()=>{ playing=!playing; pp.textContent=playing?'⏸ Pause':'▶ Play'; };
+  sl.oninput=()=>{ frame=+sl.value; playing=false; pp.textContent='▶ Play'; setFrame(frame); };
+  function loop(now){ if(!live) return; raf=requestAnimationFrame(loop);
+    const dt=(now-last)/1000; last=now;
+    if(playing){ acc+=dt; if(acc>=0.06){ acc=0; frame=(frame+1)%SIM.frames.length; sl.value=frame; setFrame(frame);} }
+    ctr.update(); ren.render(scene,cam); }
+  function onresize(){ cam.aspect=mount.clientWidth/mount.clientHeight; cam.updateProjectionMatrix(); ren.setSize(mount.clientWidth,mount.clientHeight); }
+  addEventListener('resize',onresize);
+  setFrame(0); raf=requestAnimationFrame(loop);
+  V3={ dispose(){ live=false; if(raf)cancelAnimationFrame(raf); removeEventListener('resize',onresize); try{ren.dispose();}catch(e){} mount.innerHTML=''; } };
+}
+// lazy-load Three.js only when 3D is requested, so the core MVP never depends on the CDN
+const THREE_URLS=['https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+                  'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js'];
+let threeLoading=null;
+function loadThree(){ if(typeof THREE!=='undefined'&&THREE.OrbitControls) return Promise.resolve();
+  if(threeLoading) return threeLoading;
+  threeLoading=THREE_URLS.reduce((p,url)=>p.then(()=>new Promise((res,rej)=>{
+    const s=document.createElement('script'); s.src=url; s.onload=res;
+    s.onerror=()=>rej(new Error('could not load '+url)); document.head.appendChild(s);
+  })), Promise.resolve());
+  return threeLoading; }
+document.getElementById('sim3d').onclick=()=>{
+  if(!layout.exits.length||!layout.spawns.length){ setStatus('⚠ Need a spawn + an exit first.'); return; }
+  setStatus('Loading 3D engine + simulating… (a few seconds)');
+  loadThree()
+   .then(()=>fetch('/api/simulate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload())}))
+   .then(r=>r.json()).then(d=>{
+     if(d.error){ setStatus('Error: '+d.error); return; }
+     if(!d.frames||!d.frames.length){ setStatus('No frames produced.'); return; }
+     document.getElementById('ov_pk').textContent=d.peak;
+     document.getElementById('ov_ev').textContent=d.evacuated+' / '+d.n;
+     document.getElementById('ov').style.display='block';
+     init3D(d);
+     setStatus('3D playback open. Peak density '+d.peak+' ped/m², '+d.evacuated+'/'+d.n+' evacuated.');
+   }).catch(e=>setStatus('3D error: '+(e&&e.message?e.message:e)));
+};
+document.getElementById('ov_x').onclick=()=>{ document.getElementById('ov').style.display='none'; if(V3){ V3.dispose(); V3=null; } };
 draw();
 </script>
 </body>

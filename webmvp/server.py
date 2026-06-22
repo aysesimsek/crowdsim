@@ -17,8 +17,9 @@ from matplotlib.patches import Rectangle, Circle
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from crowdsim.scenarios import Scenario, SCENARIOS
-from crowdsim.evaluate import evaluate_layout
+from crowdsim.evaluate import evaluate_layout, _spawn, _build_navs, _GroupNav, REACH
 from crowdsim.recommend import recommend
+from crowdsim.model import Config, Simulation
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SEEDS = (0, 1)
@@ -78,6 +79,49 @@ def suggest(layout):
     return {"baseline_evac": round(base["evacuated"], 1), "recommendations": out}
 
 
+def simulate(layout):
+    """Run the layout once and return a trajectory for 3D playback: per-frame agent positions + local
+    density, plus the frame each agent evacuates (so the viewer can hide it at the exit)."""
+    sc = scenario_from(layout)
+    n = int(layout.get("n", NAGENTS))
+    cfg = Config(width=sc.width, height=sc.height, boundary="walls", max_value=50.0,
+                 field_gain=1.10, field_deposit_gain=0.7)
+    rng = np.random.default_rng(0)
+    sim = Simulation(cfg, rng); sim.set_walls(sc.walls)
+    pos, grp = _spawn(sc, n, rng); m = len(pos); sim.spawn(pos)
+    gnav = _GroupNav(_build_navs(cfg, sc, inflate=0.2, nav_cell=0.4), grp.copy()); sim.nav = gnav
+    evac = np.zeros(m, bool); evac_frame = np.full(m, -1)
+    disp = sim.pos.copy(); hw, hh = sc.width / 2, sc.height / 2; parked = 0
+    frames, dens = [], []; every = 3; peak = 0.0
+    for t in range(int(45.0 / cfg.dt)):
+        sim.step()
+        d = gnav.dist_at(sim.pos)
+        for i in np.where((d < REACH) & (~evac))[0]:
+            evac[i] = True; evac_frame[i] = len(frames); disp[i] = sim.pos[i].copy()
+            gnav.group[i] = -1
+            sim.pos[i] = [-hw + 0.5 + (parked % 18) * 0.45, -hh + 0.4 + (parked // 18) * 0.45]
+            sim.vel[i] = 0.0; sim.load[i] = 0.0; parked += 1
+        alive = ~evac
+        disp[alive] = sim.pos[alive]
+        if t % every == 0:
+            ld = np.zeros(m)
+            if alive.sum() > 1:
+                ap = sim.pos[alive]
+                dd = np.linalg.norm(ap[:, None, :] - ap[None, :, :], axis=2)
+                ld[alive] = np.maximum(0.0, (dd < 1.0).sum(1) - 1.0) / np.pi
+                peak = max(peak, float(ld[alive].max()))
+            frames.append([[round(float(x), 2), round(float(z), 2)] for x, z in disp])
+            dens.append([round(float(v), 1) for v in ld])
+        if evac.all():
+            break
+    return {"w": sc.width, "h": sc.height,
+            "walls": [list(map(float, w)) for w in sc.walls],
+            "exits": [list(map(float, e)) for e in sc.exits],
+            "frames": frames, "dens": dens, "evac_frame": [int(x) for x in evac_frame],
+            "dt": round(every * cfg.dt, 3), "evacuated": int(evac.sum()), "n": m,
+            "peak": round(peak, 1)}
+
+
 def library():
     lib = {}
     for name, sc in SCENARIOS.items():
@@ -117,6 +161,8 @@ class H(BaseHTTPRequestHandler):
                 self._send(200, json.dumps(analyze(data)))
             elif self.path == "/api/recommend":
                 self._send(200, json.dumps(suggest(data)))
+            elif self.path == "/api/simulate":
+                self._send(200, json.dumps(simulate(data)))
             else:
                 self._send(404, json.dumps({"error": "not found"}))
         except Exception as e:

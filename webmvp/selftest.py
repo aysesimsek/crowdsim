@@ -29,4 +29,10 @@ rec = post("/api/recommend", {"width": s["width"], "height": s["height"], "n": 4
                               "spawns": s["spawns"], "exits": s["exits"], "goals": s["goals"]})
 print(f"  recommend NearFar: baseline={rec['baseline_evac']}  best={rec['recommendations'][0]['label']} "
       f"({rec['recommendations'][0]['evac']}, d{rec['recommendations'][0]['delta']:+})")
+s = lib["Bottleneck"]
+sim = post("/api/simulate", {"width": s["width"], "height": s["height"], "n": 45, "walls": s["walls"],
+                             "spawns": s["spawns"], "exits": s["exits"], "goals": s["goals"]})
+print(f"  simulate Bottleneck: frames={len(sim['frames'])}  agents={len(sim['frames'][0])}  "
+      f"peak={sim['peak']}  evac={sim['evacuated']}/{sim['n']}  dt={sim['dt']}")
+assert len(sim["frames"]) > 5 and len(sim["dens"]) == len(sim["frames"]) and len(sim["evac_frame"]) == sim["n"]
 print("SELFTEST PASS")
