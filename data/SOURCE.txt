@@ -1,0 +1,8 @@
+juelich_bottleneck_040_c_56.txt
+  Real pedestrian trajectories — bottleneck experiment (PeTrack), 25 fps, columns: id frame x/m y/m z/m.
+  Source: Pedestrian Dynamics Data Archive / University of Wuppertal, experimental series
+          "Crowds in front of bottlenecks ... physics and social psychology".
+  DOI: 10.34735/ped.2018.1
+  Obtained via the PedPy demo-data mirror:
+    https://pedpy.readthedocs.io/stable/_downloads/46bd9974e8e21d7ef412fec395a358d3/040_c_56_h-.txt
+  Used READ-ONLY as held-out validation data (the model was calibrated to Weidmann, not to this file).
