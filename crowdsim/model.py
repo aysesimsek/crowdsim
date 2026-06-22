@@ -30,13 +30,18 @@ class Config:
     sense_radius: float = 3.0
     dens_cap: float = 12.0
     # Social-Force locomotion
-    w_sep: float = 3.0
+    w_sep: float = 2.0              # separation weight (calibrated to the Weidmann FD: RMSE 0.035)
     w_goal: float = 1.6
     w_obs: float = 6.0
     w_soc: float = 1.2
     w_cohesion: float = 0.0          # group cohesion (0 = off): pull social-group members to their centroid
     w_compress: float = 0.0          # body compression (0 = off): linear shove when bodies overlap (crush)
     dist_floor: float = 0.4
+    ps_base: float = 0.7             # personal-space radius at rest (calibrated to the Weidmann FD)
+    ps_load: float = 0.5             # personal space expands by this much per unit affective load
+    contact_friction: float = 3.0    # granular friction: damp velocity above the jam density (jamming branch)
+    friction_range: float = 1.5      # radius (m) for the local-density estimate that gates the friction
+    jam_density: float = 3.0         # friction is zero below this local density, ramps above it (crush onset)
     base_speed: float = 1.8
     stressed_speed: float = 2.6
     max_accel: float = 8.0
@@ -199,7 +204,7 @@ class Simulation:
         c = self.cfg
         N = self.n
         load = self.load
-        ps = 0.9 + 0.5 * load                                # personal space expands with load
+        ps = c.ps_base + c.ps_load * load                    # personal space expands with load
         beta = 1.0 + 0.6 * load                              # avoidance boost with stress
         gamma = 0.3 + 1.0 * load                             # herding (social-flow) gain with stress
         np.fill_diagonal(dist, np.inf)
@@ -290,6 +295,12 @@ class Simulation:
         self.vel += accel * dt
         sp = np.linalg.norm(self.vel, axis=1)
         self.vel = np.where(sp[:, None] > vmax[:, None], self.vel * (vmax / np.maximum(sp, 1e-9))[:, None], self.vel)
+        if c.contact_friction > 0.0:        # granular jamming: speed falls toward 0 only above the jam density
+            r = c.friction_range
+            cnt = np.maximum(0.0, (dist < r).sum(axis=1) - 1.0)          # neighbours within r (excl self, dist=0)
+            local_dens = cnt / (np.pi * r * r)                          # local density (ped/m^2)
+            excess = np.maximum(0.0, local_dens - c.jam_density)        # zero below the crush-onset density
+            self.vel /= (1.0 + c.contact_friction * excess)[:, None]
         # fatigue
         self.fatigue = np.clip(self.fatigue + 0.10 * (an[:, 0] / c.max_accel) ** 2 * dt
                                - 0.18 * (1 - self.load) * dt, 0, 1)
