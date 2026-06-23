@@ -26,7 +26,10 @@ def SEC(sid, ey_tr, ey_en, t_tr, t_en, body):
 def FIG(src, alt, cap, aim, method, result):
     rows = [("Amaç", "Aim", aim), ("Yöntem", "Method", method), ("Bulgu", "Result", result)]
     body = ''.join(f'    <div class="row"><b>{L(a,b)}</b> {L(v[0],v[1])}</div>\n' for a,b,v in rows)
-    return (f'  <figure class="figwrap"><img class="figimg" src="figures/{src}" alt="{alt}">\n'
+    tr = src[:-4] + "_tr.png"
+    imgs = (f'<img class="figimg en" src="figures/{src}" alt="{alt}">'
+            f'<img class="figimg tr" src="figures/{tr}" alt="{alt}">')
+    return (f'  <figure class="figwrap">{imgs}\n'
             f'    <figcaption>{L(cap[0],cap[1])}</figcaption></figure>\n'
             f'  <div class="figexp">\n{body}  </div>\n')
 
@@ -462,6 +465,7 @@ td.num{font-family:'IBM Plex Mono',monospace;color:var(--teal-deep);font-weight:
 .tag.t{background:var(--mist);color:var(--teal-deep)} .tag.a{background:var(--amber-tint);color:var(--amber)} .tag.c{background:var(--coral-tint);color:var(--coral)}
 figure.figwrap{margin:22px 0 0}
 .figimg{width:100%;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:zoom-in;box-shadow:var(--shadow);display:block}
+:root[data-lang="tr"] img.figimg.en{display:none} :root[data-lang="en"] img.figimg.tr{display:none}
 figure.figwrap figcaption{font:400 12.5px 'IBM Plex Mono',monospace;color:var(--muted);margin-top:8px}
 .figexp{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px 16px;margin:10px 0 8px;font-size:14px}
 .figexp .row{padding:10px 0;border-bottom:1px dashed var(--line)} .figexp .row:last-child{border-bottom:0}
